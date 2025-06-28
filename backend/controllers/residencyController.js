@@ -10,7 +10,7 @@ dotenv.config();
 // Configuration
 const CONTRACT_ADDRESS = process.env.ERESIDENCY_NFT_CONTRACT_ADDRESS ;
 const PRIVATE_KEY = process.env.WALLET_PRIVATE_KEY ;
-const RPC_URL = process.env.POLYGON_RPC_URL ;
+const RPC_URL = process.env.MUMBAI_RPC_URL ;
 const METADATA_BASE_URI = process.env.METADATA_BASE_URI ;
 
 console.log(CONTRACT_ADDRESS, PRIVATE_KEY, RPC_URL, METADATA_BASE_URI);

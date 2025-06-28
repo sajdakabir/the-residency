@@ -12,15 +12,12 @@ const residencySchema = new mongoose.Schema({
   },
   tokenId: {
     type: String,
-    required: true
   },
   contractAddress: {
     type: String,
-    required: true
   },
   transactionHash: {
     type: String,
-    required: true
   },
   metadata: {
     name: String,
