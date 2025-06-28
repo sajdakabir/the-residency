@@ -188,6 +188,96 @@ export default function Dashboard() {
 
     if (!kycData) return null;
 
+    if (kycData.status === 'approved') {
+      return (
+        <div className="space-y-6">
+          {/* Verification Success Card */}
+          <div className="bg-white overflow-hidden shadow rounded-lg">
+            <div className="px-4 py-5 sm:p-6">
+              <div className="flex items-center">
+                <div className="flex-shrink-0 bg-green-100 rounded-full p-3">
+                  <svg className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <div className="ml-4">
+                  <h3 className="text-lg leading-6 font-medium text-gray-900">Identity Verified</h3>
+                  <p className="text-sm text-gray-500">Your identity has been successfully verified</p>
+                </div>
+              </div>
+
+              <div className="mt-6 border-t border-gray-200 pt-6">
+                <dl className="grid grid-cols-1 gap-x-4 gap-y-4 sm:grid-cols-2">
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">Full Name</dt>
+                    <dd className="mt-1 text-sm text-gray-900">{kycData.user?.fullName || userData?.fullName || 'N/A'}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">Email</dt>
+                    <dd className="mt-1 text-sm text-gray-900">{kycData.user?.email || userData?.email || 'N/A'}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">Verification Date</dt>
+                    <dd className="mt-1 text-sm text-gray-900">
+                      {kycData.reviewedAt ? new Date(kycData.reviewedAt).toLocaleDateString() : 'N/A'}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">Status</dt>
+                    <dd className="mt-1">
+                      <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        Verified
+                      </span>
+                    </dd>
+                  </div>
+                </dl>
+              </div>
+            </div>
+          </div>
+
+          {/* Next Steps */}
+          <div className="bg-blue-50 rounded-lg p-6">
+            <h3 className="text-lg font-medium text-blue-800 mb-4">Next Steps</h3>
+            <ul role="list" className="space-y-4">
+              <li className="flex items-start">
+                <div className="flex-shrink-0 mt-0.5">
+                  <div className="flex items-center justify-center h-5 w-5 rounded-full bg-blue-100">
+                    <svg className="h-3 w-3 text-blue-600" fill="currentColor" viewBox="0 0 12 12">
+                      <path d="M3.707 5.293a1 1 0 00-1.414 1.414l1.414-1.414zM5 8l-.707.707a1 1 0 001.414 0L5 8zm4.707-3.293a1 1 0 00-1.414-1.414l1.414 1.414zm-7.414 2l2 2 1.414-1.414-2-2-1.414 1.414zm3.414 2l4-4-1.414-1.414-4 4 1.414 1.414z" />
+                    </svg>
+                  </div>
+                </div>
+                <p className="ml-3 text-sm text-blue-700">
+                  <span className="font-medium">Mint your Digital Residency NFT</span> to complete your verification process
+                </p>
+              </li>
+              <li className="flex items-start">
+                <div className="flex-shrink-0 mt-0.5">
+                  <div className="flex items-center justify-center h-5 w-5 rounded-full bg-blue-100">
+                    <svg className="h-3 w-3 text-blue-600" fill="currentColor" viewBox="0 0 12 12">
+                      <path d="M3.707 5.293a1 1 0 00-1.414 1.414l1.414-1.414zM5 8l-.707.707a1 1 0 001.414 0L5 8zm4.707-3.293a1 1 0 00-1.414-1.414l1.414 1.414zm-7.414 2l2 2 1.414-1.414-2-2-1.414 1.414zm3.414 2l4-4-1.414-1.414-4 4 1.414 1.414z" />
+                    </svg>
+                  </div>
+                </div>
+                <p className="ml-3 text-sm text-blue-700">
+                  <span className="font-medium">Explore services</span> available to verified residents
+                </p>
+              </li>
+            </ul>
+            <div className="mt-6">
+              <button
+                onClick={() => setActiveSection('nft')}
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                Mint Your Residency NFT
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // For other statuses (pending, rejected, not_submitted)
     return (
       <div className="space-y-6">
         <div className="bg-white overflow-hidden shadow rounded-lg">
@@ -201,9 +291,17 @@ export default function Dashboard() {
                     {getStatusBadge(kycData.status)}
                   </div>
                 </div>
-                {kycData.status === 'approved' && kycData.reviewedAt && (
+                {kycData.status === 'pending' && kycData.submittedAt && (
                   <div className="text-right">
-                    <p className="text-sm font-medium text-gray-500">Approved On</p>
+                    <p className="text-sm font-medium text-gray-500">Submitted On</p>
+                    <p className="text-sm text-gray-900">
+                      {new Date(kycData.submittedAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                )}
+                {kycData.status === 'rejected' && kycData.reviewedAt && (
+                  <div className="text-right">
+                    <p className="text-sm font-medium text-gray-500">Rejected On</p>
                     <p className="text-sm text-gray-900">
                       {new Date(kycData.reviewedAt).toLocaleDateString()}
                     </p>
@@ -213,19 +311,69 @@ export default function Dashboard() {
 
               {kycData.status === 'rejected' && kycData.comments && (
                 <div className="mt-4">
-                  <p className="text-sm font-medium text-gray-500">Comments</p>
-                  <p className="mt-1 text-sm text-gray-900">{kycData.comments}</p>
+                  <p className="text-sm font-medium text-gray-500">Reason for Rejection</p>
+                  <p className="mt-1 text-sm text-gray-900 p-3 bg-gray-50 rounded-md">
+                    {kycData.comments}
+                  </p>
+                  <div className="mt-4">
+                    <button
+                      onClick={() => router.push('/')}
+                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                    >
+                      Resubmit KYC
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {kycData.status === 'pending' && (
+                <div className="mt-6">
+                  <div className="rounded-md bg-blue-50 p-4">
+                    <div className="flex">
+                      <div className="flex-shrink-0">
+                        <svg className="h-5 w-5 text-blue-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                          <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h2a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                      <div className="ml-3">
+                        <p className="text-sm text-blue-700">
+                          Your KYC application is under review. This process typically takes 1-2 business days. 
+                          You&apos;ll receive an email notification once your verification is complete.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
 
               {kycData.status === 'not_submitted' && (
                 <div className="mt-6">
-                  <button
-                    onClick={() => router.push('/')}
-                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                  >
-                    Start KYC Verification
-                  </button>
+                  <div className="rounded-md bg-yellow-50 p-4">
+                    <div className="flex">
+                      <div className="flex-shrink-0">
+                        <svg className="h-5 w-5 text-yellow-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                          <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                      <div className="ml-3">
+                        <h3 className="text-sm font-medium text-yellow-800">Verification Required</h3>
+                        <div className="mt-2 text-sm text-yellow-700">
+                          <p>You need to complete the KYC verification process to access all features.</p>
+                        </div>
+                        <div className="mt-4">
+                          <div className="-mx-2 -my-1.5 flex">
+                            <button
+                              type="button"
+                              onClick={() => router.push('/')}
+                              className="bg-yellow-50 px-2 py-1.5 rounded-md text-sm font-medium text-yellow-800 hover:bg-yellow-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-600"
+                            >
+                              Start Verification
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
