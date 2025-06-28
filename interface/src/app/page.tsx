@@ -6,11 +6,10 @@ import Image from 'next/image'
 export default function Home() {
   const [isLoading, setIsLoading] = useState(false)
   const [showApplication, setShowApplication] = useState(false)
-  const [currentStep, setCurrentStep] = useState(1)
+  const [currentStep, setCurrentStep] = useState(2) // Start at step 2 since we removed personal info
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
-    password: '',
     // KYC fields
     legalName: '',
     passportNumber: '',
@@ -118,20 +117,16 @@ export default function Home() {
   }
 
   const steps = [
-    { number: 1, title: 'Personal Information', active: currentStep === 1, completed: currentStep > 1 },
-    { number: 2, title: 'KYC Verification', active: currentStep === 2, completed: currentStep > 2 },
-    { number: 3, title: 'Entity Setup', active: currentStep === 3, completed: currentStep > 3 },
-    { number: 4, title: 'Review & Submit', active: currentStep === 4, completed: false }
+    { number: 1, title: 'KYC Details', active: currentStep === 2, completed: currentStep > 2 },
+    { number: 2, title: 'Selfie Verification', active: currentStep === 3, completed: currentStep > 3 },
+    { number: 3, title: 'Compliance', active: currentStep === 4, completed: currentStep > 4 },
   ]
 
   const handleStepClick = (stepNumber: number) => {
-    // Allow navigation to steps 1-3, but not step 4 (submit)
-    if (stepNumber < 4 && stepNumber !== currentStep) {
-      // Stop camera if leaving step 3
-      if (currentStep === 3 && cameraStream) {
-        stopCamera()
-      }
-      setCurrentStep(stepNumber)
+    // Adjust step number since we removed the first step
+    const adjustedStep = stepNumber + 1;
+    if (adjustedStep < currentStep || steps[stepNumber - 1].completed) {
+      setCurrentStep(adjustedStep)
     }
   }
 
@@ -225,7 +220,7 @@ export default function Home() {
                   setFormData({
                     fullName: '',
                     email: '',
-                    password: '',
+
                     legalName: '',
                     passportNumber: '',
                     address: '',
@@ -373,54 +368,7 @@ export default function Home() {
 
             {/* Form Content */}
             <div className="p-6 min-h-96">
-              {currentStep === 1 && (
-                <div>
-                  <h2 className="text-lg font-medium text-gray-900 mb-4">
-                    Step 1: Personal Information
-                  </h2>
-                  
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Full Name
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="Enter your full name"
-                        value={formData.fullName}
-                        onChange={(e) => handleInputChange('fullName', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                      />
-                    </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Email Address
-                      </label>
-                      <input
-                        type="email"
-                        placeholder="Enter your email"
-                        value={formData.email}
-                        onChange={(e) => handleInputChange('email', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Password
-                      </label>
-                      <input
-                        type="password"
-                        placeholder="Enter your password"
-                        value={formData.password}
-                        onChange={(e) => handleInputChange('password', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
 
               {currentStep === 2 && (
                 <div>
@@ -438,6 +386,19 @@ export default function Home() {
                         placeholder="Enter your legal name"
                         value={formData.legalName}
                         onChange={(e) => handleInputChange('legalName', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Email Address
+                      </label>
+                      <input
+                        type="email"
+                        placeholder="Enter your email address"
+                        value={formData.email}
+                        onChange={(e) => handleInputChange('email', e.target.value)}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                       />
                     </div>
@@ -730,7 +691,7 @@ export default function Home() {
               <button
                 onClick={handleContinue}
                 disabled={
-                  (currentStep === 1 && (!formData.fullName || !formData.email || !formData.password)) ||
+                  false &&
                   (currentStep === 2 && (!formData.legalName || !formData.passportNumber || !formData.address || !formData.city || !formData.postalCode || !formData.addressCountry)) ||
                   (currentStep === 3 && !formData.selfieImage) ||
                   (currentStep === 4 && (

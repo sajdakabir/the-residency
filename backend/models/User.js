@@ -21,7 +21,6 @@ const userSchema = new mongoose.Schema({
     // required: true, 
     unique: true 
   },
-  country: { type: String},
   residencyType: { 
     type: String, 
     default: 'bhutan',

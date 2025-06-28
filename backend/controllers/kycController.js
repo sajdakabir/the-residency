@@ -1,12 +1,25 @@
 import asyncHandler from 'express-async-handler';
 import Kyc from '../models/Kyc.js';
+import User from '../models/User.js';
+import { randomPassword } from '../utils/randomPassword.js';
 
 // @desc    Submit KYC data
 // @route   POST /api/kyc/submit
 // @access  Public (or Protected if needed)
 export const submitKyc = asyncHandler(async (req, res) => {
-  const { fullName, email, address } = req.body;
-  const userId = req.user._id;
+  const { fullName, email, address, country } = req.body;
+  let user;
+  user = await User.findOne({ email });
+
+  if (!user) {
+    user = await User.create({
+      fullName,
+      email,
+      password: "123fmnseb",
+      status: 'active'
+    });
+
+  } 
 
   const { passportNumber } = req.body;
   const selfieUrl = req.files?.selfie?.[0]?.path;
@@ -17,7 +30,8 @@ export const submitKyc = asyncHandler(async (req, res) => {
     passportNumber,
     selfieUrl,
     address,
-    user: userId,
+    country,
+    user: user._id,
     status: 'pending',
   });
 

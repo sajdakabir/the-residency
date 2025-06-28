@@ -13,7 +13,7 @@ const initRoutes = (app) => {
     app.use('/api/auth', authRoutes);
     
     // KYC
-    app.use('/api/kyc', protect, kycRoutes);
+    app.use('/api/kyc', kycRoutes);
     // app.use('/api/users', userRoutes);
     // app.use('/api/applications', applicationRoutes);
     // app.use('/api/documents', documentRoutes);

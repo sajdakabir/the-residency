@@ -162,14 +162,13 @@ export const login = async (req, res, next) => {
 // Register user
 export const register = async (req, res, next) => {
   try {
-    const { fullName, email, password, country } = req.body;
+    const { fullName, email, password } = req.body;
 
     // Create user
     const user = await User.create({
       fullName,
       email,
       password,
-      country,
       status: 'active'
     });
 
