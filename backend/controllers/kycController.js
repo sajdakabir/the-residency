@@ -45,13 +45,55 @@ export const submitKyc = asyncHandler(async (req, res) => {
   res.status(201).json({ message: 'KYC submitted', kycId: kyc._id, userId: user._id });
 });
 
-// @desc   Get all KYC submissions (admin)
-// @route  GET /api/kyc
+// @desc   Get KYC status for a user
+// @route  GET /api/kyc/status/:userId
+// @access Private
 export const getKycStatus = asyncHandler(async (req, res) => {
-  const { userId } = req.params;
-  const kyc = await Kyc.findOne({ user: userId });
-  if (!kyc) return res.status(404).json({ status: 'not_found' });
-  res.json({ status: kyc.status });
+  try {
+    const { userId } = req.params;
+    
+    // Find KYC record for the user
+    const kyc = await Kyc.findOne({ user: userId })
+      .select('status submittedAt reviewedAt comments')
+      .populate('user', 'fullName email');
+
+    if (!kyc) {
+      return res.status(200).json({
+        success: true,
+        data: {
+          hasKyc: false,
+          status: 'not_submitted',
+          message: 'No KYC submission found for this user'
+        }
+      });
+    }
+
+    // Format the response
+    const statusInfo = {
+      hasKyc: true,
+      status: kyc.status || 'pending',
+      submittedAt: kyc.submittedAt,
+      reviewedAt: kyc.reviewedAt,
+      comments: kyc.comments,
+      user: kyc.user ? {
+        fullName: kyc.user.fullName,
+        email: kyc.user.email
+      } : null
+    };
+
+    res.status(200).json({
+      success: true,
+      data: statusInfo
+    });
+    
+  } catch (error) {
+    console.error('Error getting KYC status:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while fetching KYC status',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
 });
 
 export const getAllKyc = asyncHandler(async (req, res) => {
