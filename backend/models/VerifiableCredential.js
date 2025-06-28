@@ -51,6 +51,10 @@ const VerifiableCredentialSchema = new mongoose.Schema({
     kycVerified: {
       type: Boolean,
       default: true
+    },
+    zkReady: {
+      type: Boolean,
+      default: true
     }
   },
   
@@ -123,7 +127,8 @@ VerifiableCredentialSchema.methods.toW3CFormat = function() {
       country: this.credentialSubject.country,
       residencyStatus: this.credentialSubject.residencyStatus,
       passportNumber: this.credentialSubject.passportNumber,
-      kycVerified: this.credentialSubject.kycVerified
+      kycVerified: this.credentialSubject.kycVerified,
+      zkReady: this.credentialSubject.zkReady
     },
     proof: this.proof,
     // Additional metadata

@@ -4,6 +4,7 @@ import usersRoutes from './users.js';
 import kycRoutes from './kyc.js';
 import residencyRoutes from './residency.js';
 import vcRoutes from './vc.js';
+import companyRoutes from './company.js';
 import {protect} from '../middleware/auth.js';
 // import userRoutes from './users.js';
 // import applicationRoutes from './applicationRoutes.js';
@@ -19,11 +20,12 @@ const initRoutes = (app) => {
   
   // Residency/NFT
   app.use('/api/residency', residencyRoutes);
-    // KYC
-    app.use('/api/kyc', kycRoutes);
     
     // Verifiable Credentials
     app.use('/api/vc', vcRoutes);
+    
+    // Company/Entity Registration
+    app.use('/api/company', companyRoutes);
     
     // app.use('/api/users', userRoutes);
     // app.use('/api/applications', applicationRoutes);

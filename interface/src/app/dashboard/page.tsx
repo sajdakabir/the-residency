@@ -166,6 +166,20 @@ export default function Dashboard() {
         if (status) {
           setMintStatus(status);
         }
+
+        // Check if user has existing company registration
+        try {
+          const companyResponse = await fetch(`http://localhost:8000/api/company/user/${userId}`);
+          if (companyResponse.ok) {
+            const companyResult = await companyResponse.json();
+            if (companyResult.success && companyResult.data) {
+              setCompanyData(companyResult.data);
+              setIsSubmitted(true);
+            }
+          }
+        } catch (error) {
+          console.log('No existing company found or error fetching company data');
+        }
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'An error occurred';
         setError(errorMessage);
@@ -202,18 +216,58 @@ export default function Dashboard() {
     }))
   }
 
-  const handleFormSubmit = () => {
-    // Mock company registration
-    const mockCompanyData = {
-      registrationNumber: 'BT-' + Math.random().toString(36).substr(2, 8).toUpperCase(),
-      taxId: 'TAX-' + Math.random().toString(36).substr(2, 6).toUpperCase(),
-      registrationDate: new Date().toLocaleDateString(),
-      status: 'Active',
-      ...companyFormData
+  const handleFormSubmit = async () => {
+    const userId = localStorage.getItem('userId');
+    if (!userId) {
+      alert('User ID not found. Please refresh the page.');
+      return;
     }
-    setCompanyData(mockCompanyData)
-    setIsSubmitted(true)
-    setShowCompanyForm(false)
+
+    try {
+      // Prepare form data for API call
+      const registrationData = {
+        companyName: companyFormData.companyName,
+        companyType: companyFormData.companyType,
+        businessActivity: companyFormData.businessActivity,
+        jurisdiction: companyFormData.jurisdiction,
+        virtualOfficeOptIn: companyFormData.virtualOfficeOptIn,
+        owner: userId,
+        ownerDirector: companyFormData.ownerDirector,
+        coFounders: companyFormData.coFounders,
+        governanceModel: companyFormData.governanceModel,
+        bylawsFile: companyFormData.bylawsFile?.name || null,
+        termsAccepted: companyFormData.termsAccepted,
+        bitcoinAddress: companyFormData.bitcoinAddress,
+        paymentConfirmed: companyFormData.paymentConfirmed
+      };
+
+      const response = await fetch('http://localhost:8000/api/company/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(registrationData)
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message || 'Registration failed');
+      }
+
+      if (result.success) {
+        setCompanyData(result.data);
+        setIsSubmitted(true);
+        setShowCompanyForm(false);
+        alert('Company registered successfully!');
+      } else {
+        throw new Error(result.message || 'Registration failed');
+      }
+
+    } catch (error) {
+      console.error('Company registration error:', error);
+      alert(`Registration failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 
   const downloadCertificate = () => {
@@ -1361,9 +1415,48 @@ export default function Dashboard() {
                               </div>
                             </div>
                           </div>
+
+                          {/* Bitcoin Payment Details */}
+                          <div className="space-y-4">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Your Bitcoin Address
+                              </label>
+                              <input
+                                type="text"
+                                value={companyFormData.bitcoinAddress}
+                                onChange={(e) => handleCompanyFormChange('bitcoinAddress', e.target.value)}
+                                placeholder="e.g. bc1q..."
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-gray-900 focus:border-gray-900 outline-none"
+                              />
+                            </div>
+                            <div className="flex items-start gap-2">
+                              <input
+                                type="checkbox"
+                                id="paymentConfirmed"
+                                checked={companyFormData.paymentConfirmed}
+                                onChange={(e) => handleCompanyFormChange('paymentConfirmed', e.target.checked)}
+                                className="mt-1"
+                              />
+                              <label htmlFor="paymentConfirmed" className="text-sm text-gray-700">
+                                I have sent the BTC payment and confirm the transaction.
+                              </label>
+                            </div>
+                            {/* Fake payment helper for demo */}
+                            {!companyFormData.paymentConfirmed && (
+                              <button
+                                onClick={() => {
+                                  handleCompanyFormChange('bitcoinAddress', 'FAKE_BTC_ADDRESS_DEMO');
+                                  handleCompanyFormChange('paymentConfirmed', true);
+                                }}
+                                className="text-xs text-blue-600 underline"
+                              >
+                                Auto-fill demo payment
+                              </button>
+                            )}
+                          </div>
                         </div>
                       )}
-
                       {/* Form Navigation */}
                       <div className="flex justify-between pt-6 border-t">
                         <button
@@ -1385,7 +1478,7 @@ export default function Dashboard() {
                             (currentFormStep === 1 && (!companyFormData.companyName || !companyFormData.companyType || !companyFormData.businessActivity)) ||
                             (currentFormStep === 2 && !companyFormData.governanceModel) ||
                             (currentFormStep === 3 && !companyFormData.termsAccepted) ||
-                            (currentFormStep === 4 && (!companyFormData.bitcoinAddress || !companyFormData.paymentConfirmed))
+                            (currentFormStep === 4 && !companyFormData.paymentConfirmed)
                           }
                           className="bg-gray-900 text-white px-6 py-2 rounded-md font-medium text-sm hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
                         >

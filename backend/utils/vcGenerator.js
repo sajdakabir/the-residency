@@ -78,7 +78,8 @@ export const generateCompleteVC = (userData, kycData) => {
     residencyStatus: 'approved',
     passportNumber: userData.passportNumber,
     kycVerified: true,
-    verificationDate: now.toISOString()
+    verificationDate: now.toISOString(),
+    zkReady: true // ZK-proof ready indicator for UI
   };
   
   const vcPayload = {
