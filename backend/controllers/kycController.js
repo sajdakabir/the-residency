@@ -28,7 +28,7 @@ export const submitKyc = asyncHandler(async (req, res) => {
 // @route  GET /api/kyc
 export const getKycStatus = asyncHandler(async (req, res) => {
   const { userId } = req.params;
-  const kyc = await Kyc.findOne({ _id: userId });
+  const kyc = await Kyc.findOne({ user: userId });
   if (!kyc) return res.status(404).json({ status: 'not_found' });
   res.json({ status: kyc.status });
 });
