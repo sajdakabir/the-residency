@@ -62,7 +62,24 @@ export default function Dashboard() {
   })
   const [newCoFounder, setNewCoFounder] = useState({ name: '', email: '' })
   const [isSubmitted, setIsSubmitted] = useState(false)
-  const [companyData, setCompanyData] = useState<any>(null)
+  const [companyData, setCompanyData] = useState<{
+    registrationNumber: string;
+    taxId: string;
+    registrationDate: string;
+    status: string;
+    companyName: string;
+    companyType: string;
+    businessActivity: string;
+    jurisdiction: string;
+    virtualOfficeOptIn: boolean;
+    ownerDirector: string;
+    coFounders: Array<{id: number, name: string, email: string}>;
+    governanceModel: string;
+    bylawsFile: File | null;
+    termsAccepted: boolean;
+    bitcoinAddress: string;
+    paymentConfirmed: boolean;
+  } | null>(null)
 
   const fetchKycStatus = async (userId: string) => {
     try {
@@ -98,20 +115,15 @@ export default function Dashboard() {
         }
         const userData = await userResponse.json();
         setUserData(userData.data);
-
-<<<<<<< HEAD
-        const data = await response.json();
-        setUserData(data.data);
         
         // Auto-fill owner/director name from user data
         setCompanyFormData(prev => ({
           ...prev,
-          ownerDirector: data.data.fullName
+          ownerDirector: userData.data.fullName
         }));
-=======
+        
         // Fetch KYC status
         await fetchKycStatus(userId);
->>>>>>> f2feea8f9185828ae829abf8789c2647d73d8384
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'An error occurred';
         setError(errorMessage);
@@ -124,7 +136,7 @@ export default function Dashboard() {
     fetchUserData();
   }, [router]);
 
-  const handleCompanyFormChange = (field: string, value: any) => {
+  const handleCompanyFormChange = (field: string, value: string | boolean | File | null) => {
     setCompanyFormData(prev => ({
       ...prev,
       [field]: value
@@ -189,7 +201,7 @@ export default function Dashboard() {
     { id: 'nft', label: 'Residency NFT', icon: 'badge' },
     { id: 'company', label: 'Entities', icon: 'building' },
     { id: 'documents', label: 'Documents', icon: 'document' }
-  ] as const;
+  ];
 
   const getStatusBadge = (status: KycStatus) => {
     const statusConfig = {
@@ -526,7 +538,7 @@ export default function Dashboard() {
                         : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                     }`}
                   >
-                    <span className="text-base">{renderIcon(item.icon, item.count)}</span>
+                    <span className="text-base">{renderIcon(item.icon, 'count' in item ? (item as { count?: string }).count : undefined)}</span>
                     {item.label}
                   </button>
                 ))}
