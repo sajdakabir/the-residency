@@ -171,16 +171,26 @@ export default function Dashboard() {
 
         // Check if user has existing company registration
         try {
-          const companyResponse = await fetch(`http://localhost:8000/api/company/user/${userId}`);
+          const companyResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/company/user/${userId}`);
+          console.log('Fetching company data for user:', userId);
+          console.log('Company response status:', companyResponse.status);
+          
           if (companyResponse.ok) {
             const companyResult = await companyResponse.json();
+            console.log('Company result:', companyResult);
+            
             if (companyResult.success && companyResult.data) {
+              console.log('Setting company data:', companyResult.data);
               setCompanyData(companyResult.data);
               setIsSubmitted(true);
+            } else {
+              console.log('No company data found in response');
             }
+          } else {
+            console.log('Company response not ok:', companyResponse.status);
           }
         } catch (error) {
-          console.log('No existing company found or error fetching company data');
+          console.error('Error fetching company data:', error);
         }
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'An error occurred';
@@ -1162,6 +1172,13 @@ export default function Dashboard() {
 
               {activeSection === 'company' && (
                 <div className="space-y-6">
+                  {/* Debug info */}
+                  {process.env.NODE_ENV === 'development' && (
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3 text-xs">
+                      <strong>Debug:</strong> showCompanyForm: {showCompanyForm.toString()}, isSubmitted: {isSubmitted.toString()}, companyData: {companyData ? 'exists' : 'null'}
+                    </div>
+                  )}
+                  
                   {!showCompanyForm && !isSubmitted && (
                     <div className="ml-8">
                       <h1 className="text-xl font-semibold text-gray-900 mb-2">
