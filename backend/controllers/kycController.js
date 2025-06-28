@@ -1,30 +1,55 @@
 import asyncHandler from 'express-async-handler';
 import Kyc from '../models/Kyc.js';
+import User from '../models/User.js';
 
 // @desc    Submit KYC data
 // @route   POST /api/kyc/submit
 // @access  Public (or Protected if needed)
 export const submitKyc = asyncHandler(async (req, res) => {
-  const { fullName, email, address } = req.body;
-  // For now assume frontend uploads files elsewhere and passes URLs; extend with multer later
-  const { passportUrl, selfieUrl } = req.body;
+  const { fullName, email, address, country, passportNumber } = req.body;
+  let user = await User.findOne({ email });
+
+  if (!user) {
+    // Only create user if we have passportNumber to avoid unique constraint
+    if (!passportNumber) {
+      throw new Error('Passport number is required for new user registration');
+    }
+    
+    user = await User.create({
+      fullName,
+      email,
+      password: "123fmnseb",
+      passportNumber,  // Include passportNumber for new users
+      status: 'active'
+    });
+    
+  } else if (passportNumber) {
+    // Update existing user's passport number if provided
+    user.passportNumber = passportNumber;
+    await user.save();
+  }
+
+  const selfieUrl = req.files?.selfie?.[0]?.path;
 
   const kyc = await Kyc.create({
     fullName,
     email,
-    passportUrl,
+    passportNumber,
     selfieUrl,
     address,
+    country,
+    user: user._id,
+    status: 'pending',
   });
 
-  res.status(201).json({ message: 'KYC submitted', kycId: kyc._id });
+  res.status(201).json({ message: 'KYC submitted', kycId: kyc._id, userId: user._id });
 });
 
 // @desc   Get all KYC submissions (admin)
 // @route  GET /api/kyc
 export const getKycStatus = asyncHandler(async (req, res) => {
   const { userId } = req.params;
-  const kyc = await Kyc.findOne({ _id: userId });
+  const kyc = await Kyc.findOne({ user: userId });
   if (!kyc) return res.status(404).json({ status: 'not_found' });
   res.json({ status: kyc.status });
 });

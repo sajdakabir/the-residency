@@ -1,5 +1,7 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
+import Kyc from '../models/Kyc.js';
+import { environment } from '../config/environment.js';
 
 // Protect routes
 export const protect = async (req, res, next) => {
@@ -27,7 +29,7 @@ export const protect = async (req, res, next) => {
 
   try {
     // Verify token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, environment.JWT_SECRET);
 
     // Get user from the token
     req.user = await User.findById(decoded.id).select('-password');
@@ -75,8 +77,8 @@ export const authorize = (...roles) => {
 const signToken = (id) => {
   return jwt.sign(
     { id },
-    process.env.JWT_SECRET || 'your_jwt_secret',
-    { expiresIn: process.env.JWT_EXPIRE || '30d' }
+    environment.JWT_SECRET,
+    { expiresIn: environment.JWT_EXPIRE }
   );
 };
 
@@ -84,12 +86,12 @@ const signToken = (id) => {
 const sendTokenResponse = (user, statusCode, res) => {
   // Create token
   const token = signToken(user._id);
-  const cookieExpireDays = parseInt(process.env.JWT_COOKIE_EXPIRE) || 30;
+  const cookieExpireDays = parseInt(environment.JWT_COOKIE_EXPIRE) || 30;
 
   const options = {
     expires: new Date(Date.now() + cookieExpireDays * 24 * 60 * 60 * 1000),
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: environment.NODE_ENV === 'production',
     sameSite: 'strict',
   };
 
@@ -161,17 +163,14 @@ export const login = async (req, res, next) => {
 // Register user
 export const register = async (req, res, next) => {
   try {
-    const { fullName, email, password, passportNumber, country, residencyType } = req.body;
+    const { fullName, email, password } = req.body;
 
     // Create user
     const user = await User.create({
       fullName,
       email,
       password,
-      passportNumber,
-      country,
-      residencyType,
-      verificationToken: Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
+      status: 'active'
     });
 
     sendTokenResponse(user, 201, res);
@@ -194,14 +193,43 @@ export const register = async (req, res, next) => {
   }
 };
 
-// Get current logged in user
+// Get user by ID with KYC data
 export const getMe = async (req, res, next) => {
   try {
-    const user = await User.findById(req.user.id);
+    const { userId } = req.params;
     
+    // Find user and populate KYC data
+    const user = await User.findById(userId).select('-password');
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Find KYC data for this user
+    const kyc = await Kyc.findOne({ user: userId });
+
+    // Format response
+    const userData = {
+      id: user._id,
+      fullName: user.fullName,
+      email: user.email,
+      passportNumber: user.passportNumber,
+      kyc: kyc ? {
+        status: kyc.status,
+        submittedAt: kyc.createdAt,
+        selfieUrl: kyc.selfieUrl,
+        address: kyc.address,
+        country: kyc.country
+      } : null,
+      hasKyc: !!kyc,
+      kycStatus: kyc?.status || 'not_submitted'
+    };
+
     res.status(200).json({
       success: true,
-      data: user
+      data: userData
     });
   } catch (err) {
     console.error('Get me error:', err);

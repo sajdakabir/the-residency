@@ -1,10 +1,37 @@
-'use client'
+'use client';
 
-import Image from 'next/image'
-import { useState } from 'react'
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+
+type UserData = {
+  id: string;
+  fullName: string;
+  email: string;
+  passportNumber?: string;
+  kyc?: {
+    status: string;
+    submittedAt: string;
+    selfieUrl?: string;
+    address?: string;
+    country?: string;
+  } | null;
+  hasKyc: boolean;
+  kycStatus: string;
+  nftTokenId?: string;
+  nftContract?: string;
+  applicationDate?: string;
+  approvalDate?: string;
+  residencyId?: string;
+};
 
 export default function Dashboard() {
-  const [activeSection, setActiveSection] = useState('overview')
+  const [activeSection, setActiveSection] = useState('overview');
+  const [userData, setUserData] = useState<UserData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState('');
+  const router = useRouter();
+  
+  // Entity registration state
   const [showCompanyForm, setShowCompanyForm] = useState(false)
   const [currentFormStep, setCurrentFormStep] = useState(1)
   const [companyFormData, setCompanyFormData] = useState({
@@ -15,7 +42,7 @@ export default function Dashboard() {
     jurisdiction: 'Bhutan',
     virtualOfficeOptIn: false,
     // Section 2: Ownership & Control
-    ownerDirector: 'Oliur Sahin', // Auto-filled from user
+    ownerDirector: '', // Will be auto-filled from user data
     coFounders: [] as Array<{id: number, name: string, email: string}>,
     governanceModel: '',
     // Section 3: Documentation
@@ -29,25 +56,39 @@ export default function Dashboard() {
   const [isSubmitted, setIsSubmitted] = useState(false)
   const [companyData, setCompanyData] = useState<any>(null)
 
-  // Mock data - in real app this would come from API
-  const userData = {
-    name: 'Oliur Sahin',
-    email: 'oliursahin@gmail.com',
-    kycStatus: 'approved', // approved, pending, rejected
-    applicationDate: '2024-01-15',
-    approvalDate: '2024-01-17',
-    residencyId: 'DRK-2024-001847',
-    nftTokenId: '#1847',
-    nftContract: '0x1234...5678'
-  }
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const userId = localStorage.getItem('userId');
+        if (!userId) {
+          router.push('/');
+          return;
+        }
 
-  const menuItems = [
-    { id: 'overview', label: 'Overview', icon: '🏠' },
-    { id: 'kyc', label: 'KYC Status', icon: '✓' },
-    { id: 'nft', label: 'Residency NFT', icon: '🎭' },
-    { id: 'company', label: 'Entities', icon: '🏢' },
-    { id: 'documents', label: 'Documents', icon: '📄' }
-  ]
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/me/${userId}`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch user data');
+        }
+
+        const data = await response.json();
+        setUserData(data.data);
+        
+        // Auto-fill owner/director name from user data
+        setCompanyFormData(prev => ({
+          ...prev,
+          ownerDirector: data.data.fullName
+        }));
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'An error occurred';
+        setError(errorMessage);
+        console.error('Error fetching user data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchUserData();
+  }, [router]);
 
   const handleCompanyFormChange = (field: string, value: any) => {
     setCompanyFormData(prev => ({
@@ -92,6 +133,69 @@ export default function Dashboard() {
     alert('Digital Certificate would be downloaded here (PDF generation not implemented in MVP)')
   }
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-lg">Loading...</div>
+      </div>
+    );
+  }
+
+  if (error || !userData) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-red-500">{error || 'User data not found'}</div>
+      </div>
+    );
+  }
+
+  const menuItems = [
+    { id: 'overview', label: 'Overview', icon: 'home' },
+    { id: 'kyc', label: 'KYC Status', icon: 'check' },
+    { id: 'nft', label: 'Residency NFT', icon: 'badge' },
+    { id: 'company', label: 'Entities', icon: 'building' },
+    { id: 'documents', label: 'Documents', icon: 'document' }
+  ]
+
+  const renderIcon = (iconType: string) => {
+    const iconProps = "w-4 h-4 text-current"
+    
+    switch(iconType) {
+      case 'home':
+        return (
+          <svg className={iconProps} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+          </svg>
+        )
+      case 'check':
+        return (
+          <svg className={iconProps} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        )
+      case 'badge':
+        return (
+          <svg className={iconProps} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+          </svg>
+        )
+      case 'building':
+        return (
+          <svg className={iconProps} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+          </svg>
+        )
+      case 'document':
+        return (
+          <svg className={iconProps} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+        )
+      default:
+        return null
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 relative">
       {/* Grey dots gradient background */}
@@ -133,10 +237,10 @@ export default function Dashboard() {
               <div className="mb-8">
                 <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4">
                   <span className="text-xl font-semibold text-blue-600">
-                    {userData.name.split(' ').map(n => n[0]).join('')}
+                    {userData.fullName.split(' ').map(n => n[0]).join('')}
                   </span>
                 </div>
-                <h2 className="text-lg font-semibold text-gray-900">{userData.name}</h2>
+                <h2 className="text-lg font-semibold text-gray-900">{userData.fullName}</h2>
                 <p className="text-sm text-gray-600">{userData.email}</p>
                 <div className="mt-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
                   <span className="w-2 h-2 bg-green-400 rounded-full mr-1"></span>
@@ -156,7 +260,7 @@ export default function Dashboard() {
                         : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                     }`}
                   >
-                    <span className="text-base">{item.icon}</span>
+                    <span className="text-base">{renderIcon(item.icon)}</span>
                     {item.label}
                   </button>
                 ))}
@@ -182,20 +286,32 @@ export default function Dashboard() {
                   <div className="grid grid-cols-1 gap-4">
                     <div className="bg-green-50 rounded-lg p-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                          <span className="text-green-600">✓</span>
+                        <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                          <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
                         </div>
                         <div>
-                          <p className="text-sm font-medium text-green-900">KYC Approved</p>
-                          <p className="text-xs text-green-700">Verified on {userData.approvalDate}</p>
+                          <p className="text-sm font-medium text-green-900">KYC Status:</p>
+                          <p className={`text-sm font-medium ${
+                            userData.kycStatus === 'approved' ? 'text-green-600' : 
+                            userData.kycStatus === 'pending' ? 'text-yellow-600' : 
+                            userData.kycStatus === 'rejected' ? 'text-red-600' : 'text-gray-600'
+                          }`}>
+                            {userData.kycStatus.split('_').map(word => 
+                              word.charAt(0).toUpperCase() + word.slice(1)
+                            ).join(' ')}
+                          </p>
                         </div>
                       </div>
                     </div>
 
                     <div className="bg-gray-50 rounded-lg p-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
-                          <span className="text-gray-600">🎭</span>
+                        <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                          <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+                          </svg>
                         </div>
                         <div>
                           <h3 className="text-sm font-medium text-gray-900">NFT Minted</h3>
@@ -235,15 +351,15 @@ export default function Dashboard() {
                     <div className="space-y-3 text-sm">
                       <div className="flex justify-between">
                         <span className="text-gray-500">Application Date:</span>
-                        <span className="text-gray-900">{userData.applicationDate}</span>
+                        <span className="text-gray-900 font-medium">{userData.applicationDate}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-500">Approval Date:</span>
-                        <span className="text-gray-900">{userData.approvalDate}</span>
+                        <span className="text-gray-900 font-medium">{userData.approvalDate}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-500">Residency ID:</span>
-                        <span className="text-gray-900">{userData.residencyId}</span>
+                        <span className="text-gray-900 font-medium">{userData.residencyId}</span>
                       </div>
                     </div>
                   </div>
@@ -290,7 +406,7 @@ export default function Dashboard() {
                         <div className="text-white text-center">
                           <div className="text-2xl mb-1">🏔️</div>
                           <div className="text-xs font-medium">DRUK</div>
-                          <div className="text-xs opacity-80">{userData.nftTokenId}</div>
+                          <div className="text-xs opacity-80">{userData?.nftTokenId || 'N/A'}</div>
                         </div>
                       </div>
                       <h3 className="text-lg font-medium text-gray-900">Druk Digital Residency</h3>
@@ -300,15 +416,15 @@ export default function Dashboard() {
                     <div className="space-y-3 text-sm">
                       <div className="flex justify-between">
                         <span className="text-gray-500">Token ID:</span>
-                        <span className="text-gray-900">{userData.nftTokenId}</span>
+                        <span className="text-gray-900 font-medium">{userData?.nftTokenId || 'N/A'}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-500">Contract:</span>
-                        <span className="text-gray-900 font-mono text-xs">{userData.nftContract}</span>
+                        <span className="text-gray-900 font-mono text-xs">{userData?.nftContract || 'N/A'}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-500">Network:</span>
-                        <span className="text-gray-900">Ethereum</span>
+                        <span className="text-gray-900 font-medium">Ethereum</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-500">Status:</span>
@@ -797,7 +913,7 @@ export default function Dashboard() {
                               businessActivity: '',
                               jurisdiction: 'Bhutan',
                               virtualOfficeOptIn: false,
-                              ownerDirector: 'Oliur Sahin',
+                              ownerDirector: '',
                               coFounders: [],
                               governanceModel: '',
                               bylawsFile: null,

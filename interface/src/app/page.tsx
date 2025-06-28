@@ -2,29 +2,50 @@
 
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
+import { useRouter } from 'next/navigation'
 
 export default function Home() {
+  const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [showApplication, setShowApplication] = useState(false)
-  const [currentStep, setCurrentStep] = useState(1)
-  const [formData, setFormData] = useState({
+  const [currentStep, setCurrentStep] = useState(2) // Start at step 2 since we removed personal info
+  // Define the KYC form data type
+  type KycFormData = {
+    [key: string]: string | boolean | null;
+    fullName: string;
+    email: string;
+    // KYC fields
+    passportNumber: string;
+    address: string;
+    city: string;
+    postalCode: string;
+    addressCountry: string;
+    // Selfie
+    selfieImage: string | null;
+    // Compliance questions
+    hasBeenConvicted: boolean | null;
+    hasBankruptcy: boolean | null;
+    isPoliticallyExposed: boolean | null;
+    hasRegulatorySanctions: boolean | null;
+    agreesToTerms: boolean;
+  }
+
+  const [formData, setFormData] = useState<KycFormData>({
     fullName: '',
     email: '',
-    country: '',
     // KYC fields
-    legalName: '',
     passportNumber: '',
     address: '',
     city: '',
     postalCode: '',
     addressCountry: '',
     // Selfie
-    selfieImage: null as string | null,
+    selfieImage: null,
     // Compliance questions
-    hasBeenConvicted: null as boolean | null,
-    hasBankruptcy: null as boolean | null,
-    isPoliticallyExposed: null as boolean | null,
-    hasRegulatorySanctions: null as boolean | null,
+    hasBeenConvicted: null,
+    hasBankruptcy: null,
+    isPoliticallyExposed: null,
+    hasRegulatorySanctions: null,
     agreesToTerms: false
   })
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null)
@@ -62,10 +83,96 @@ export default function Home() {
     }
   }
 
-  const handleSubmit = () => {
-    // Here you would normally send the data to your backend
-    console.log('Submitting application:', formData)
-    setIsSubmitted(true)
+  const handleSubmit = async () => {
+    try {
+      setIsLoading(true);
+      
+      // Create FormData object to handle file upload
+      const formDataToSend = new FormData();
+      
+      // Map frontend form fields to backend field names
+      const fieldMappings = {
+        'fullName': 'fullName',
+        'email': 'email',
+        'passportNumber': 'passportNumber',
+        'addressCountry': 'country' // Map addressCountry to country
+      } as const;
+
+      // Add mapped scalar fields to FormData
+      Object.entries(fieldMappings).forEach(([frontendKey, backendKey]) => {
+        const value = formData[frontendKey];
+        if (value !== null && value !== undefined && value !== '') {
+          formDataToSend.append(backendKey, String(value));
+        }
+      });
+
+      // Combine address + city + postalCode into a single string for the 'address' field
+      const combinedAddressParts = [formData.address, formData.city, formData.postalCode].filter(Boolean);
+      if (combinedAddressParts.length > 0) {
+        formDataToSend.append('address', combinedAddressParts.join(', '));
+      }
+      
+      // Add compliance fields if they exist
+      if (formData.hasBeenConvicted !== null) {
+        formDataToSend.append('hasBeenConvicted', String(formData.hasBeenConvicted));
+      }
+      if (formData.hasBankruptcy !== null) {
+        formDataToSend.append('hasBankruptcy', String(formData.hasBankruptcy));
+      }
+      if (formData.isPoliticallyExposed !== null) {
+        formDataToSend.append('isPoliticallyExposed', String(formData.isPoliticallyExposed));
+      }
+      
+      // Convert base64 image to blob and append to FormData as 'selfie'
+      if (formData.selfieImage) {
+        const base64Response = await fetch(formData.selfieImage);
+        const blob = await base64Response.blob();
+        formDataToSend.append('selfie', blob, 'selfie.jpg');
+      }
+      
+      // Send the request to the backend
+      console.log('Sending KYC data to:', `${process.env.NEXT_PUBLIC_API_URL}/api/kyc/submit`);
+      console.log('Form data keys:', Array.from(formDataToSend.keys()));
+      
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/kyc/submit`, {
+        method: 'POST',
+        body: formDataToSend,
+        // Don't set Content-Type header - let the browser set it with the correct boundary
+        headers: {
+          'Accept': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        let errorMessage = `HTTP error! status: ${response.status}`;
+        try {
+          const errorData = await response.json();
+          console.error('Error response:', errorData);
+          errorMessage = errorData.message || errorData.error || errorMessage;
+        } catch (e) {
+          console.error('Failed to parse error response:', e);
+        }
+        throw new Error(errorMessage);
+      }
+      
+      // Success: store identifiers locally then redirect
+      try {
+        const data = await response.json();
+        if (data.userId) localStorage.setItem('userId', data.userId);
+        if (data.kycId) localStorage.setItem('kycId', data.kycId);
+        localStorage.setItem('isKycApplied', 'true');
+      } catch (e) {
+        console.warn('Unable to parse success response JSON', e);
+      }
+      setIsSubmitted(true);
+      router.push('/dashboard');
+      
+    } catch (error) {
+      console.error('Error submitting KYC:', error);
+      alert(`Error submitting KYC: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   const handlePrevious = () => {
@@ -118,20 +225,16 @@ export default function Home() {
   }
 
   const steps = [
-    { number: 1, title: 'Personal Information', active: currentStep === 1, completed: currentStep > 1 },
-    { number: 2, title: 'KYC Verification', active: currentStep === 2, completed: currentStep > 2 },
-    { number: 3, title: 'Entity Setup', active: currentStep === 3, completed: currentStep > 3 },
-    { number: 4, title: 'Review & Submit', active: currentStep === 4, completed: false }
+    { number: 1, title: 'KYC Details', active: currentStep === 2, completed: currentStep > 2 },
+    { number: 2, title: 'Selfie Verification', active: currentStep === 3, completed: currentStep > 3 },
+    { number: 3, title: 'Compliance', active: currentStep === 4, completed: currentStep > 4 },
   ]
 
   const handleStepClick = (stepNumber: number) => {
-    // Allow navigation to steps 1-3, but not step 4 (submit)
-    if (stepNumber < 4 && stepNumber !== currentStep) {
-      // Stop camera if leaving step 3
-      if (currentStep === 3 && cameraStream) {
-        stopCamera()
-      }
-      setCurrentStep(stepNumber)
+    // Adjust step number since we removed the first step
+    const adjustedStep = stepNumber + 1;
+    if (adjustedStep < currentStep || steps[stepNumber - 1].completed) {
+      setCurrentStep(adjustedStep)
     }
   }
 
@@ -225,8 +328,7 @@ export default function Home() {
                   setFormData({
                     fullName: '',
                     email: '',
-                    country: '',
-                    legalName: '',
+
                     passportNumber: '',
                     address: '',
                     city: '',
@@ -295,7 +397,7 @@ export default function Home() {
                       {/* Subtitle lines */}
                       <div>
                         <p className="text-sm text-gray-600 ml-16">
-                          Get verified. Get your ID. Build a company — all from anywhere, under Bhutan's new digital frontier.
+                          Get verified. Get your ID. Build a company — all from anywhere, under Bhutan&apos;s new digital frontier.
                         </p>
                       </div>
                     </div>
@@ -373,63 +475,7 @@ export default function Home() {
 
             {/* Form Content */}
             <div className="p-6 min-h-96">
-              {currentStep === 1 && (
-                <div>
-                  <h2 className="text-lg font-medium text-gray-900 mb-4">
-                    Step 1: Personal Information
-                  </h2>
-                  
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Full Name
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="Enter your full name"
-                        value={formData.fullName}
-                        onChange={(e) => handleInputChange('fullName', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                      />
-                    </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Email Address
-                      </label>
-                      <input
-                        type="email"
-                        placeholder="Enter your email"
-                        value={formData.email}
-                        onChange={(e) => handleInputChange('email', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Country of Residence
-                      </label>
-                      <select
-                        value={formData.country}
-                        onChange={(e) => handleInputChange('country', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                      >
-                        <option value="">Select your country</option>
-                        <option value="US">United States</option>
-                        <option value="UK">United Kingdom</option>
-                        <option value="CA">Canada</option>
-                        <option value="AU">Australia</option>
-                        <option value="DE">Germany</option>
-                        <option value="FR">France</option>
-                        <option value="JP">Japan</option>
-                        <option value="SG">Singapore</option>
-                        <option value="other">Other</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-              )}
 
               {currentStep === 2 && (
                 <div>
@@ -445,8 +491,21 @@ export default function Home() {
                       <input
                         type="text"
                         placeholder="Enter your legal name"
-                        value={formData.legalName}
-                        onChange={(e) => handleInputChange('legalName', e.target.value)}
+                        value={formData.fullName}
+                        onChange={(e) => handleInputChange('fullName', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Email Address
+                      </label>
+                      <input
+                        type="email"
+                        placeholder="Enter your email address"
+                        value={formData.email}
+                        onChange={(e) => handleInputChange('email', e.target.value)}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                       />
                     </div>
@@ -739,8 +798,8 @@ export default function Home() {
               <button
                 onClick={handleContinue}
                 disabled={
-                  (currentStep === 1 && (!formData.fullName || !formData.email || !formData.country)) ||
-                  (currentStep === 2 && (!formData.legalName || !formData.passportNumber || !formData.address || !formData.city || !formData.postalCode || !formData.addressCountry)) ||
+                  false &&
+                  (currentStep === 2 && (!formData.fullName || !formData.passportNumber || !formData.address || !formData.city || !formData.postalCode || !formData.addressCountry)) ||
                   (currentStep === 3 && !formData.selfieImage) ||
                   (currentStep === 4 && (
                     formData.hasBeenConvicted === null ||
