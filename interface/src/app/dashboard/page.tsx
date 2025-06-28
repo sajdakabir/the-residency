@@ -623,21 +623,21 @@ export default function Dashboard() {
 
                   {/* Check if user is verified */}
                   {kycData?.status === 'approved' ? (
-                    <div className="space-y-4">
+                    <div className="space-y-6">
                       {/* Credential Status */}
-                      <div className="bg-green-50 border border-green-200 rounded-lg p-6">
+                      <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
                         <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                            <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{backgroundColor: '#DDEEE9'}}>
+                            <svg className="w-6 h-6" style={{color: '#42976A'}} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
                             </svg>
                           </div>
                           <div className="flex-1">
-                            <h3 className="text-lg font-semibold text-green-900">Verifiable Credential Available</h3>
-                            <p className="text-sm text-green-700">Your Bhutan eResidency credential is ready to use</p>
+                            <h3 className="text-lg font-semibold text-gray-900">Verifiable Credential Available</h3>
+                            <p className="text-sm text-gray-600">Your Bhutan eResidency credential is ready to use</p>
                           </div>
                           <div className="text-right">
-                            <div className="bg-green-600 text-white text-xs px-2 py-1 rounded-full font-medium">
+                            <div className="text-white text-xs px-3 py-1.5 rounded-lg font-medium" style={{backgroundColor: '#42976A'}}>
                               ACTIVE
                             </div>
                           </div>
@@ -646,61 +646,61 @@ export default function Dashboard() {
 
                       {/* Quick Actions */}
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                        <div className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-md transition-shadow">
                           <div className="text-center">
-                            <div className="w-12 h-12 bg-blue-100 rounded-lg mx-auto mb-3 flex items-center justify-center">
+                            <div className="w-12 h-12 bg-blue-50 rounded-lg mx-auto mb-4 flex items-center justify-center">
                               <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                               </svg>
                             </div>
-                            <h3 className="text-sm font-medium text-gray-900 mb-1">View Credential</h3>
-                            <p className="text-xs text-gray-600 mb-3">Access your digital wallet</p>
+                            <h3 className="text-sm font-medium text-gray-900 mb-2">View Credential</h3>
+                            <p className="text-xs text-gray-500 mb-4">Access your digital wallet</p>
                             <button
                               onClick={() => window.open('/vc', '_blank')}
-                              className="text-blue-600 text-sm font-medium hover:text-blue-700"
+                              className="text-blue-600 text-sm font-medium hover:text-blue-700 transition-colors"
                             >
                               Open Wallet →
                             </button>
                           </div>
                         </div>
 
-                        <div className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                        <div className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-md transition-shadow">
                           <div className="text-center">
-                            <div className="w-12 h-12 bg-purple-100 rounded-lg mx-auto mb-3 flex items-center justify-center">
+                            <div className="w-12 h-12 bg-purple-50 rounded-lg mx-auto mb-4 flex items-center justify-center">
                               <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                               </svg>
                             </div>
-                            <h3 className="text-sm font-medium text-gray-900 mb-1">Download</h3>
-                            <p className="text-xs text-gray-600 mb-3">Save as JSON file</p>
+                            <h3 className="text-sm font-medium text-gray-900 mb-2">Download</h3>
+                            <p className="text-xs text-gray-500 mb-4">Save as JSON file</p>
                             <button
                               onClick={() => {
                                 alert('Download feature will be available in the full wallet interface');
                               }}
-                              className="text-purple-600 text-sm font-medium hover:text-purple-700"
+                              className="text-purple-600 text-sm font-medium hover:text-purple-700 transition-colors"
                             >
                               Download →
                             </button>
                           </div>
                         </div>
 
-                        <div className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                        <div className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-md transition-shadow">
                           <div className="text-center">
-                            <div className="w-12 h-12 bg-green-100 rounded-lg mx-auto mb-3 flex items-center justify-center">
-                              <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <div className="w-12 h-12 bg-amber-50 rounded-lg mx-auto mb-4 flex items-center justify-center">
+                              <svg className="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" />
                               </svg>
                             </div>
-                            <h3 className="text-sm font-medium text-gray-900 mb-1">Share</h3>
-                            <p className="text-xs text-gray-600 mb-3">Generate verification link</p>
+                            <h3 className="text-sm font-medium text-gray-900 mb-2">Share</h3>
+                            <p className="text-xs text-gray-500 mb-4">Generate verification link</p>
                             <button
                               onClick={() => {
                                 const verifyUrl = `${window.location.origin}/verify?user=${userData.id}`;
                                 navigator.clipboard.writeText(verifyUrl);
                                 alert('Verification link copied to clipboard!');
                               }}
-                              className="text-green-600 text-sm font-medium hover:text-green-700"
+                              className="text-amber-600 text-sm font-medium hover:text-amber-700 transition-colors"
                             >
                               Copy Link →
                             </button>
@@ -709,67 +709,70 @@ export default function Dashboard() {
                       </div>
 
                       {/* Credential Info */}
-                      <div className="bg-white border border-gray-200 rounded-lg p-6">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-4">Credential Information</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                      <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+                        <h3 className="text-lg font-semibold text-gray-900 mb-6">Credential Information</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
                           <div>
-                            <label className="text-gray-500 font-medium">Credential Type</label>
-                            <p className="text-gray-900">Bhutan eResidency Certificate</p>
+                            <label className="text-gray-500 font-medium text-xs uppercase tracking-wide">Credential Type</label>
+                            <p className="text-gray-900 font-medium mt-1">Bhutan eResidency Certificate</p>
                           </div>
                           <div>
-                            <label className="text-gray-500 font-medium">Issued By</label>
-                            <p className="text-gray-900">Kingdom of Bhutan</p>
+                            <label className="text-gray-500 font-medium text-xs uppercase tracking-wide">Issued By</label>
+                            <p className="text-gray-900 font-medium mt-1">Kingdom of Bhutan</p>
                           </div>
                           <div>
-                            <label className="text-gray-500 font-medium">Issue Date</label>
-                            <p className="text-gray-900">{kycData?.reviewedAt ? new Date(kycData.reviewedAt).toLocaleDateString() : 'N/A'}</p>
+                            <label className="text-gray-500 font-medium text-xs uppercase tracking-wide">Issue Date</label>
+                            <p className="text-gray-900 font-medium mt-1">{kycData?.reviewedAt ? new Date(kycData.reviewedAt).toLocaleDateString() : 'N/A'}</p>
                           </div>
                           <div>
-                            <label className="text-gray-500 font-medium">Status</label>
-                            <span className="text-green-600 font-medium">✓ Verified & Active</span>
+                            <label className="text-gray-500 font-medium text-xs uppercase tracking-wide">Status</label>
+                            <div className="flex items-center gap-2 mt-1">
+                              <div className="w-2 h-2 rounded-full" style={{backgroundColor: '#42976A'}}></div>
+                              <span className="text-gray-900 font-medium">Verified & Active</span>
+                            </div>
                           </div>
                         </div>
                       </div>
 
                       {/* Technology Info */}
-                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-4">W3C Standards Compliance</h3>
-                        <div className="space-y-3 text-sm">
-                          <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                            <span className="text-gray-700">Verifiable Credentials Data Model v1.1</span>
+                      <div className="bg-gray-50 border border-gray-200 rounded-xl p-6">
+                        <h3 className="text-lg font-semibold text-gray-900 mb-6">W3C Standards Compliance</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                          <div className="flex items-center gap-3">
+                            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                            <span className="text-gray-700 font-medium">Verifiable Credentials Data Model v1.1</span>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                            <span className="text-gray-700">JSON-LD Linked Data</span>
+                          <div className="flex items-center gap-3">
+                            <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                            <span className="text-gray-700 font-medium">JSON-LD Linked Data</span>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                            <span className="text-gray-700">Ed25519 Digital Signatures</span>
+                          <div className="flex items-center gap-3">
+                            <div className="w-2 h-2 rounded-full" style={{backgroundColor: '#42976A'}}></div>
+                            <span className="text-gray-700 font-medium">Ed25519 Digital Signatures</span>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                            <span className="text-gray-700">Decentralized Identifiers (DID)</span>
+                          <div className="flex items-center gap-3">
+                            <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
+                            <span className="text-gray-700 font-medium">Decentralized Identifiers (DID)</span>
                           </div>
                         </div>
                       </div>
                     </div>
                   ) : (
-                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+                    <div className="bg-gray-50 border border-gray-200 rounded-xl p-6">
                       <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
-                          <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
+                          <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.98-.833-2.75 0L4.064 16.5c-.77.833.192 2.5 1.732 2.5z" />
                           </svg>
                         </div>
                         <div>
-                          <h3 className="text-lg font-semibold text-yellow-900">Verification Required</h3>
-                          <p className="text-sm text-yellow-700 mt-1">
+                          <h3 className="text-lg font-semibold text-gray-900">Verification Required</h3>
+                          <p className="text-sm text-gray-600 mt-1">
                             Complete your KYC verification to access your digital credential wallet.
                           </p>
                           <button
                             onClick={() => setActiveSection('kyc')}
-                            className="mt-3 bg-yellow-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-yellow-700 transition-colors"
+                            className="mt-4 bg-gray-900 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors"
                           >
                             Complete Verification
                           </button>
