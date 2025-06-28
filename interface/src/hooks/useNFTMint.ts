@@ -37,6 +37,30 @@ export function useNFTMint() {
     }
   };
 
+  const saveWalletAddress = async (userId: string, walletAddress: string) => {
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/wallet`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId,
+          walletAddress
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save wallet address');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error saving wallet address:', error);
+      throw error;
+    }
+  };
+
   const checkMintStatus = async (userId: string): Promise<MintStatus | null> => {
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/residency/status/${userId}`);
@@ -102,6 +126,7 @@ export function useNFTMint() {
     isConnected,
     connectWallet,
     disconnect,
+    saveWalletAddress,
     
     // NFT minting
     mintNFT,

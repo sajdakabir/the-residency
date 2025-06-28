@@ -57,6 +57,7 @@ const contractABI = [
 
 export const checkMintStatus = async (req, res) => {
   try {
+    console.log('Checking mint status for user:', req.params.userId);
     const { userId } = req.params;
     const residency = await Residency.findOne({ user: userId });
     

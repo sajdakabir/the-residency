@@ -46,12 +46,35 @@ export default function Dashboard() {
     isConnected, 
     connectWallet, 
     disconnect,
+    saveWalletAddress,
     mintNFT, 
     checkMintStatus, 
     isLoading: isMinting, 
     mintStatus,
     setMintStatus 
   } = useNFTMint();
+
+  // Save wallet address when connected
+  const handleWalletConnect = async () => {
+    try {
+      await connectWallet();
+      
+      // Save wallet address to database after connection
+      setTimeout(async () => {
+        const userId = localStorage.getItem('userId');
+        if (userId && address) {
+          try {
+            await saveWalletAddress(userId, address);
+            console.log('Wallet address saved to database');
+          } catch (error) {
+            console.error('Failed to save wallet address:', error);
+          }
+        }
+      }, 1000); // Small delay to ensure address is available
+    } catch (error) {
+      console.error('Failed to connect wallet:', error);
+    }
+  };
 
   const fetchKycStatus = async (userId: string) => {
     try {
@@ -289,7 +312,7 @@ export default function Dashboard() {
                 <div className="space-y-3">
                   {!isConnected ? (
                     <button
-                      onClick={connectWallet}
+                      onClick={handleWalletConnect}
                       className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
                     >
                       Connect Wallet
@@ -562,8 +585,15 @@ export default function Dashboard() {
                           </svg>
                         </div>
                         <div>
-                          <p className="text-sm font-medium text-blue-900">NFT Minted</p>
-                          <p className="text-xs text-blue-700">Token {userData.nftTokenId}</p>
+                          <p className="text-sm font-medium text-blue-900">
+                            {mintStatus?.hasMinted ? 'NFT Minted' : 'Wallet Connected'}
+                          </p>
+                          <p className="text-xs text-blue-700">
+                            {mintStatus?.hasMinted 
+                              ? `Token ${mintStatus.tokenId || userData.nftTokenId}`
+                              : `${address?.slice(0, 6)}...${address?.slice(-4)}`
+                            }
+                          </p>
                         </div>
                       </div>
                     </div>

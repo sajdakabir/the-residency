@@ -2,7 +2,9 @@
 
 // Import routes
 import authRoutes from './auth.js';
+import usersRoutes from './users.js';
 import kycRoutes from './kyc.js';
+import residencyRoutes from './residency.js';
 import {protect} from '../middleware/auth.js';
 // import userRoutes from './users.js';
 // import applicationRoutes from './applicationRoutes.js';
@@ -11,9 +13,13 @@ import {protect} from '../middleware/auth.js';
 const initRoutes = (app) => {
     // API Routes
     app.use('/api/auth', authRoutes);
+  app.use('/api/users', usersRoutes);
     
-    // KYC
-    app.use('/api/kyc', kycRoutes);
+      // KYC
+  app.use('/api/kyc', kycRoutes);
+  
+  // Residency/NFT
+  app.use('/api/residency', residencyRoutes);
     // app.use('/api/users', userRoutes);
     // app.use('/api/applications', applicationRoutes);
     // app.use('/api/documents', documentRoutes);
