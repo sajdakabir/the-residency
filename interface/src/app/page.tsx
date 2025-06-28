@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
+import { useRouter } from 'next/navigation'
 
 export default function Home() {
+  const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [showApplication, setShowApplication] = useState(false)
   const [currentStep, setCurrentStep] = useState(2) // Start at step 2 since we removed personal info
@@ -93,18 +95,22 @@ export default function Home() {
         'fullName': 'fullName',
         'email': 'email',
         'passportNumber': 'passportNumber',
-        'address': 'address',
-        'city': 'city',
-        'postalCode': 'postalCode',
-        'addressCountry': 'country'  // Map addressCountry to country
-      };
+        'addressCountry': 'country' // Map addressCountry to country
+      } as const;
 
-      // Add mapped fields to FormData
+      // Add mapped scalar fields to FormData
       Object.entries(fieldMappings).forEach(([frontendKey, backendKey]) => {
-        if (formData[frontendKey] !== null && formData[frontendKey] !== undefined) {
-          formDataToSend.append(backendKey, String(formData[frontendKey]));
+        const value = formData[frontendKey];
+        if (value !== null && value !== undefined && value !== '') {
+          formDataToSend.append(backendKey, String(value));
         }
       });
+
+      // Combine address + city + postalCode into a single string for the 'address' field
+      const combinedAddressParts = [formData.address, formData.city, formData.postalCode].filter(Boolean);
+      if (combinedAddressParts.length > 0) {
+        formDataToSend.append('address', combinedAddressParts.join(', '));
+      }
       
       // Add compliance fields if they exist
       if (formData.hasBeenConvicted !== null) {
@@ -149,8 +155,17 @@ export default function Home() {
         throw new Error(errorMessage);
       }
       
-      // If successful, show success state
+      // Success: store identifiers locally then redirect
+      try {
+        const data = await response.json();
+        if (data.userId) localStorage.setItem('userId', data.userId);
+        if (data.kycId) localStorage.setItem('kycId', data.kycId);
+        localStorage.setItem('isKycApplied', 'true');
+      } catch (e) {
+        console.warn('Unable to parse success response JSON', e);
+      }
       setIsSubmitted(true);
+      router.push('/dashboard');
       
     } catch (error) {
       console.error('Error submitting KYC:', error);

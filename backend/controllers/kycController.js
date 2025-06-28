@@ -6,21 +6,29 @@ import User from '../models/User.js';
 // @route   POST /api/kyc/submit
 // @access  Public (or Protected if needed)
 export const submitKyc = asyncHandler(async (req, res) => {
-  const { fullName, email, address, country } = req.body;
-  let user;
-  user = await User.findOne({ email });
+  const { fullName, email, address, country, passportNumber } = req.body;
+  let user = await User.findOne({ email });
 
   if (!user) {
+    // Only create user if we have passportNumber to avoid unique constraint
+    if (!passportNumber) {
+      throw new Error('Passport number is required for new user registration');
+    }
+    
     user = await User.create({
       fullName,
       email,
       password: "123fmnseb",
+      passportNumber,  // Include passportNumber for new users
       status: 'active'
     });
+    
+  } else if (passportNumber) {
+    // Update existing user's passport number if provided
+    user.passportNumber = passportNumber;
+    await user.save();
+  }
 
-  } 
-
-  const { passportNumber } = req.body;
   const selfieUrl = req.files?.selfie?.[0]?.path;
 
   const kyc = await Kyc.create({
@@ -34,7 +42,7 @@ export const submitKyc = asyncHandler(async (req, res) => {
     status: 'pending',
   });
 
-  res.status(201).json({ message: 'KYC submitted', kycId: kyc._id });
+  res.status(201).json({ message: 'KYC submitted', kycId: kyc._id, userId: user._id });
 });
 
 // @desc   Get all KYC submissions (admin)
