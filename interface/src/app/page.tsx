@@ -10,7 +10,7 @@ export default function Home() {
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
-    country: '',
+    password: '',
     // KYC fields
     legalName: '',
     passportNumber: '',
@@ -225,7 +225,7 @@ export default function Home() {
                   setFormData({
                     fullName: '',
                     email: '',
-                    country: '',
+                    password: '',
                     legalName: '',
                     passportNumber: '',
                     address: '',
@@ -408,24 +408,15 @@ export default function Home() {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Country of Residence
+                        Password
                       </label>
-                      <select
-                        value={formData.country}
-                        onChange={(e) => handleInputChange('country', e.target.value)}
+                      <input
+                        type="password"
+                        placeholder="Enter your password"
+                        value={formData.password}
+                        onChange={(e) => handleInputChange('password', e.target.value)}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                      >
-                        <option value="">Select your country</option>
-                        <option value="US">United States</option>
-                        <option value="UK">United Kingdom</option>
-                        <option value="CA">Canada</option>
-                        <option value="AU">Australia</option>
-                        <option value="DE">Germany</option>
-                        <option value="FR">France</option>
-                        <option value="JP">Japan</option>
-                        <option value="SG">Singapore</option>
-                        <option value="other">Other</option>
-                      </select>
+                      />
                     </div>
                   </div>
                 </div>
@@ -739,7 +730,7 @@ export default function Home() {
               <button
                 onClick={handleContinue}
                 disabled={
-                  (currentStep === 1 && (!formData.fullName || !formData.email || !formData.country)) ||
+                  (currentStep === 1 && (!formData.fullName || !formData.email || !formData.password)) ||
                   (currentStep === 2 && (!formData.legalName || !formData.passportNumber || !formData.address || !formData.city || !formData.postalCode || !formData.addressCountry)) ||
                   (currentStep === 3 && !formData.selfieImage) ||
                   (currentStep === 4 && (
