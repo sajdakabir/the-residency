@@ -6,7 +6,10 @@ import {
   updateCompany,
   getAllCompanies,
   deleteCompany,
-  getAllUserCompanies
+  getAllUserCompanies,
+  getCompanyStatus,
+  downloadCertificate,
+  regenerateCertificate
 } from '../controllers/companyController.js';
 
 const router = express.Router();
@@ -30,6 +33,21 @@ router.get('/user/:userId', getCompanyByUser);
 // @desc    Get company by registration number
 // @access  Public
 router.get('/registration/:regNumber', getCompanyByRegistration);
+
+// @route   GET /api/company/status/:companyId
+// @desc    Get company status
+// @access  Public
+router.get('/status/:companyId', getCompanyStatus);
+
+// @route   GET /api/company/certificate/:companyId
+// @desc    Download company certificate
+// @access  Public
+router.get('/certificate/:companyId', downloadCertificate);
+
+// @route   POST /api/company/regenerate-certificate/:companyId
+// @desc    Regenerate company certificate
+// @access  Public
+router.post('/regenerate-certificate/:companyId', regenerateCertificate);
 
 // @route   PUT /api/company/:companyId
 // @desc    Update company information
