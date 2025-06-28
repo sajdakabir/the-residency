@@ -47,10 +47,10 @@ export default function Dashboard() {
 
         const data = await response.json();
         setUserData(data.data);
-      } catch (err: any) {
-        const errorMessage = err instanceof Error ? err.message : 'An error occurred';
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'An error occurred';
         setError(errorMessage);
-        console.error('Error fetching user data:', err);
+        console.error('Error fetching user data:', error);
       } finally {
         setIsLoading(false);
       }
@@ -76,12 +76,51 @@ export default function Dashboard() {
   }
 
   const menuItems = [
-    { id: 'overview', label: 'Overview', icon: '🏠' },
-    { id: 'kyc', label: 'KYC Status', icon: '✓' },
-    { id: 'nft', label: 'Residency NFT', icon: '🎭' },
-    { id: 'company', label: 'Company Info', icon: '🏢' },
-    { id: 'documents', label: 'Documents', icon: '📄' }
+    { id: 'overview', label: 'Overview', icon: 'home' },
+    { id: 'kyc', label: 'KYC Status', icon: 'check' },
+    { id: 'nft', label: 'Residency NFT', icon: 'badge' },
+    { id: 'company', label: 'Company Info', icon: 'building' },
+    { id: 'documents', label: 'Documents', icon: 'document' }
   ]
+
+  const renderIcon = (iconType: string) => {
+    const iconProps = "w-4 h-4 text-current"
+    
+    switch(iconType) {
+      case 'home':
+        return (
+          <svg className={iconProps} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+          </svg>
+        )
+      case 'check':
+        return (
+          <svg className={iconProps} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        )
+      case 'badge':
+        return (
+          <svg className={iconProps} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+          </svg>
+        )
+      case 'building':
+        return (
+          <svg className={iconProps} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+          </svg>
+        )
+      case 'document':
+        return (
+          <svg className={iconProps} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+        )
+      default:
+        return null
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 relative">
@@ -116,9 +155,9 @@ export default function Dashboard() {
 
       {/* Main Container - centered with bordered card */}
       <div className="min-h-screen flex items-center justify-center p-8 relative z-10">
-        <div className="bg-white rounded-2xl shadow-lg overflow-hidden flex w-full max-w-4xl h-auto">
+        <div className="bg-white rounded-2xl shadow-lg overflow-hidden flex w-full max-w-5xl min-h-[600px]">
           {/* Left side - Sidebar */}
-          <div className="w-96 bg-gray-50 border-r">
+          <div className="w-72 bg-gray-50 border-r">
             <div className="p-6">
               {/* User Profile */}
               <div className="mb-8">
@@ -147,7 +186,7 @@ export default function Dashboard() {
                         : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                     }`}
                   >
-                    <span className="text-base">{item.icon}</span>
+                    <span className="text-base">{renderIcon(item.icon)}</span>
                     {item.label}
                   </button>
                 ))}
@@ -156,7 +195,7 @@ export default function Dashboard() {
           </div>
 
           {/* Right side - Main Content */}
-          <div className="w-96 flex flex-col">
+          <div className="flex-1 flex flex-col">
             <div className="flex-1 p-6">
               {activeSection === 'overview' && (
                 <div className="space-y-6">
@@ -173,8 +212,10 @@ export default function Dashboard() {
                   <div className="grid grid-cols-1 gap-4">
                     <div className="bg-green-50 rounded-lg p-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                          <span className="text-green-600">✓</span>
+                        <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                          <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
                         </div>
                         <div>
                           <p className="text-sm font-medium text-green-900">KYC Status:</p>
@@ -193,8 +234,10 @@ export default function Dashboard() {
 
                     <div className="bg-blue-50 rounded-lg p-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                          <span className="text-blue-600">🎭</span>
+                        <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                          <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+                          </svg>
                         </div>
                         <div>
                           <p className="text-sm font-medium text-blue-900">NFT Minted</p>
@@ -234,15 +277,15 @@ export default function Dashboard() {
                     <div className="space-y-3 text-sm">
                       <div className="flex justify-between">
                         <span className="text-gray-500">Application Date:</span>
-                        <span className="text-gray-900">{userData.applicationDate}</span>
+                        <span className="text-gray-900 font-medium">{userData.applicationDate}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-500">Approval Date:</span>
-                        <span className="text-gray-900">{userData.approvalDate}</span>
+                        <span className="text-gray-900 font-medium">{userData.approvalDate}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-500">Residency ID:</span>
-                        <span className="text-gray-900">{userData.residencyId}</span>
+                        <span className="text-gray-900 font-medium">{userData.residencyId}</span>
                       </div>
                     </div>
                   </div>
@@ -299,7 +342,7 @@ export default function Dashboard() {
                     <div className="space-y-3 text-sm">
                       <div className="flex justify-between">
                         <span className="text-gray-500">Token ID:</span>
-                        <span className="text-gray-900">{userData?.nftTokenId || 'N/A'}</span>
+                        <span className="text-gray-900 font-medium">{userData?.nftTokenId || 'N/A'}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-500">Contract:</span>
@@ -307,7 +350,7 @@ export default function Dashboard() {
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-500">Network:</span>
-                        <span className="text-gray-900">Ethereum</span>
+                        <span className="text-gray-900 font-medium">Ethereum</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-500">Status:</span>
