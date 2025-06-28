@@ -18,14 +18,14 @@ const userSchema = new mongoose.Schema({
   },
   passportNumber: { 
     type: String, 
-    required: true, 
+    // required: true, 
     unique: true 
   },
-  country: { type: String, required: true },
+  country: { type: String},
   residencyType: { 
     type: String, 
-    enum: ['bhutan', 'draper'], 
-    required: true 
+    default: 'bhutan',
+    // required: true 
   },
   isVerified: { 
     type: Boolean, 
