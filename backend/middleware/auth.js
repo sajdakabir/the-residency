@@ -162,12 +162,15 @@ export const login = async (req, res, next) => {
 // Register user
 export const register = async (req, res, next) => {
   try {
-    const { email, password} = req.body;
+    const { fullName, email, password, country } = req.body;
 
     // Create user
     const user = await User.create({
+      fullName,
       email,
       password,
+      country,
+      status: 'active'
     });
 
     sendTokenResponse(user, 201, res);
