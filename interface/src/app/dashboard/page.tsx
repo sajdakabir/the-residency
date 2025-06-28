@@ -484,8 +484,12 @@ export default function Dashboard() {
                           try {
                             const userId = localStorage.getItem('userId');
                             if (!userId) return;
-                            await mintNFT(userId);
-                            alert('NFT minted successfully!');
+                            const result = await mintNFT(userId);
+                            if (result.synced) {
+                              alert(`NFT data synced successfully! Your existing NFT (Token ID: ${result.tokenId}) has been synchronized from the blockchain.`);
+                            } else {
+                              alert('NFT minted successfully!');
+                            }
                           } catch (error) {
                             alert(error instanceof Error ? error.message : 'Failed to mint NFT');
                           }
@@ -997,7 +1001,11 @@ export default function Dashboard() {
                                 }
                                 try {
                                   const result = await mintNFT(userId);
-                                  alert(`NFT minted successfully! Token ID: ${result.tokenId}`);
+                                  if (result.synced) {
+                                    alert(`NFT data synced successfully! Your existing NFT (Token ID: ${result.tokenId}) has been synchronized from the blockchain.`);
+                                  } else {
+                                    alert(`NFT minted successfully! Token ID: ${result.tokenId}`);
+                                  }
                                 } catch (error) {
                                   console.error('Minting failed:', error);
                                   alert(`Minting failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
