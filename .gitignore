@@ -13,6 +13,7 @@
 frontend/node_modules
 frontend/.next
 frontend/.yarn
+frontend/.next
 
 backend/node_modules
 backend/.next
