@@ -1,22 +1,27 @@
 import { ethers } from 'ethers';
 import dotenv from 'dotenv';
+import mongoose from 'mongoose';
 import Residency from '../models/Residency.js';
 import User from '../models/User.js';
+import Kyc from '../models/Kyc.js';
 
 dotenv.config();
 
 // Configuration
-const CONTRACT_ADDRESS = process.env.ERESIDENCY_NFT_CONTRACT_ADDRESS;
-const PRIVATE_KEY = process.env.WALLET_PRIVATE_KEY;
-const RPC_URL = process.env.POLYGON_RPC_URL || 'https://polygon-amoy.g.alchemy.com/v2/03HS00LLlaFH3bVKly11J';
-const METADATA_BASE_URI = process.env.METADATA_BASE_URI || 'https://api.eresidency.example.com/metadata';
+const CONTRACT_ADDRESS = process.env.ERESIDENCY_NFT_CONTRACT_ADDRESS ;
+const PRIVATE_KEY = process.env.WALLET_PRIVATE_KEY ;
+const RPC_URL = process.env.POLYGON_RPC_URL ;
+const METADATA_BASE_URI = process.env.METADATA_BASE_URI ;
 
-// Validate required environment variables
+console.log(CONTRACT_ADDRESS, PRIVATE_KEY, RPC_URL, METADATA_BASE_URI);
+
+
+// Validate configuration
 if (!CONTRACT_ADDRESS) {
-  throw new Error('ERESIDENCY_NFT_CONTRACT_ADDRESS is not defined in environment variables');
+  console.warn('Using default contract address for local development');
 }
 if (!PRIVATE_KEY) {
-  throw new Error('WALLET_PRIVATE_KEY is not defined in environment variables');
+  console.warn('Using default private key for local development');
 }
 
 // Initialize provider and signer with error handling
@@ -55,6 +60,7 @@ const contractABI = [
 
 export const checkMintStatus = async (req, res) => {
   try {
+    console.log('Checking mint status for user:', req.params.userId);
     const { userId } = req.params;
     const residency = await Residency.findOne({ user: userId });
     
@@ -141,11 +147,14 @@ export const mintResidencyNFT = async (req, res) => {
         error: 'User not found' 
       });
     }
-    
-    if (user.kycStatus !== 'approved') {
+
+    // Check KYC status from Kyc model
+    const kyc = await Kyc.findOne({ user: userId }).session(session);
+    if (!kyc || kyc.status !== 'approved') {
       await session.abortTransaction();
       return res.status(403).json({ 
-        error: 'KYC verification not approved' 
+        error: 'KYC verification not approved',
+        kycStatus: kyc?.status || 'not_found'
       });
     }
     

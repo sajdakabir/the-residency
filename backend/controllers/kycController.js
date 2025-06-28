@@ -1,6 +1,7 @@
 import asyncHandler from 'express-async-handler';
 import Kyc from '../models/Kyc.js';
 import User from '../models/User.js';
+import { generateVC } from './vcController.js';
 
 // @desc    Submit KYC data
 // @route   POST /api/kyc/submit
@@ -41,6 +42,37 @@ export const submitKyc = asyncHandler(async (req, res) => {
     user: user._id,
     status: 'pending',
   });
+
+  // For demo purposes - auto-approve KYC after 2 seconds and generate VC
+  setTimeout(async () => {
+    try {
+      console.log('Auto-approving KYC for demo purposes...');
+      
+      // Update KYC status to approved
+      kyc.status = 'approved';
+      kyc.reviewedAt = new Date();
+      await kyc.save();
+      
+      console.log(`KYC ${kyc._id} auto-approved for user ${user._id}`);
+      
+      // Generate VC automatically
+      const vcController = await import('./vcController.js');
+      const mockReq = { params: { userId: user._id.toString() } };
+      const mockRes = {
+        status: (code) => ({
+          json: (data) => {
+            console.log(`VC generated for user ${user._id}:`, data.vcId);
+          }
+        })
+      };
+      
+      // Call generateVC function
+      await vcController.generateVC(mockReq, mockRes);
+      
+    } catch (error) {
+      console.error('Error in auto-approval process:', error);
+    }
+  }, 2000); // 2 second delay to simulate processing
 
   res.status(201).json({ message: 'KYC submitted', kycId: kyc._id, userId: user._id });
 });
@@ -114,6 +146,25 @@ export const updateKycStatus = asyncHandler(async (req, res) => {
   }
   kyc.status = status;
   await kyc.save();
+  
+  // If approved, generate VC
+  if (status === 'approved') {
+    try {
+      const vcController = await import('./vcController.js');
+      const mockReq = { params: { userId: kyc.user.toString() } };
+      const mockRes = {
+        status: (code) => ({
+          json: (data) => {
+            console.log(`VC generated for user ${kyc.user}:`, data.vcId);
+          }
+        })
+      };
+      await vcController.generateVC(mockReq, mockRes);
+    } catch (error) {
+      console.error('Error generating VC on approval:', error);
+    }
+  }
+  
   res.json({ message: `KYC ${status}`, kyc });
 });
 

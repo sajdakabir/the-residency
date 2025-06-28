@@ -59,7 +59,24 @@ const userSchema = new mongoose.Schema({
     type: String,
     enum: ['active', 'suspended', 'deactivated'],
     default: 'active'
-  }
+  },
+  // Wallet information
+  walletAddress: {
+    type: String,
+    lowercase: true,
+    sparse: true, // Allows multiple null values
+    validate: {
+      validator: function(v) {
+        if (!v) return true; // Allow null/undefined
+        return /^0x[a-fA-F0-9]{40}$/.test(v); // Validate Ethereum address format
+      },
+      message: 'Invalid Ethereum wallet address format'
+    }
+  },
+  // NFT information
+  nftTokenId: String,
+  nftContractAddress: String,
+  eResidencyId: String
 }, { 
   timestamps: true 
 });

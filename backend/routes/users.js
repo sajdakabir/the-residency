@@ -252,4 +252,52 @@ router.delete('/:id', [protect, authorize('admin')], async (req, res) => {
   }
 });
 
+// @desc    Update user's wallet address
+// @route   PUT /api/users/wallet
+// @access  Public (since we're using localStorage userId)
+router.put('/wallet', async (req, res) => {
+  try {
+    const { userId, walletAddress } = req.body;
+    
+    if (!userId || !walletAddress) {
+      return res.status(400).json({
+        success: false,
+        message: 'userId and walletAddress are required'
+      });
+    }
+    
+    // Update user with wallet address
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { walletAddress: walletAddress.toLowerCase() },
+      { new: true }
+    ).select('-password');
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+    
+    res.json({
+      success: true,
+      message: 'Wallet address updated successfully',
+      data: {
+        id: user._id,
+        walletAddress: user.walletAddress
+      }
+    });
+    
+  } catch (error) {
+    console.error('Error updating wallet address:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+});
+
+
+
 export default router;

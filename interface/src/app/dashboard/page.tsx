@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useNFTMint } from '@/hooks/useNFTMint';
 
 type KycStatus = 'not_submitted' | 'pending' | 'approved' | 'rejected' | 'in_review';
 
@@ -38,11 +39,88 @@ export default function Dashboard() {
   const [isKycLoading, setIsKycLoading] = useState(false);
   const [error, setError] = useState('');
   const router = useRouter();
+  
+  // Wallet and NFT minting
+  const { 
+    address, 
+    isConnected, 
+    connectWallet, 
+    disconnect,
+    saveWalletAddress,
+    mintNFT, 
+    checkMintStatus, 
+    isLoading: isMinting, 
+    mintStatus,
+    setMintStatus 
+  } = useNFTMint();
+
+  // Save wallet address when connected
+  const handleWalletConnect = async () => {
+    try {
+      await connectWallet();
+      
+      // Save wallet address to database after connection
+      setTimeout(async () => {
+        const userId = localStorage.getItem('userId');
+        if (userId && address) {
+          try {
+            await saveWalletAddress(userId, address);
+            console.log('Wallet address saved to database');
+          } catch (error) {
+            console.error('Failed to save wallet address:', error);
+          }
+        }
+      }, 1000); // Small delay to ensure address is available
+    } catch (error) {
+      console.error('Failed to connect wallet:', error);
+    }
+  };
+  // Entity registration state
+  const [showCompanyForm, setShowCompanyForm] = useState(false)
+  const [currentFormStep, setCurrentFormStep] = useState(1)
+  const [companyFormData, setCompanyFormData] = useState({
+    // Section 1: Basic Company Info
+    companyName: '',
+    companyType: '',
+    businessActivity: '',
+    jurisdiction: 'Bhutan',
+    virtualOfficeOptIn: false,
+    // Section 2: Ownership & Control
+    ownerDirector: '', // Will be auto-filled from user data
+    coFounders: [] as Array<{id: number, name: string, email: string}>,
+    governanceModel: '',
+    // Section 3: Documentation
+    bylawsFile: null as File | null,
+    termsAccepted: false,
+    // Section 4: Payment
+    bitcoinAddress: '',
+    paymentConfirmed: false
+  })
+  const [newCoFounder, setNewCoFounder] = useState({ name: '', email: '' })
+  const [isSubmitted, setIsSubmitted] = useState(false)
+  const [companyData, setCompanyData] = useState<{
+    registrationNumber: string;
+    taxId: string;
+    registrationDate: string;
+    status: string;
+    companyName: string;
+    companyType: string;
+    businessActivity: string;
+    jurisdiction: string;
+    virtualOfficeOptIn: boolean;
+    ownerDirector: string;
+    coFounders: Array<{id: number, name: string, email: string}>;
+    governanceModel: string;
+    bylawsFile: File | null;
+    termsAccepted: boolean;
+    bitcoinAddress: string;
+    paymentConfirmed: boolean;
+  } | null>(null)
 
   const fetchKycStatus = async (userId: string) => {
     try {
       setIsKycLoading(true);
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/kyc/status/${userId}`);
+              const response = await fetch(`http://localhost:8000/api/kyc/status/${userId}`);
       if (!response.ok) {
         throw new Error('Failed to fetch KYC status');
       }
@@ -67,15 +145,27 @@ export default function Dashboard() {
         }
 
         // Fetch user data
-        const userResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/me/${userId}`);
+        const userResponse = await fetch(`http://localhost:8000/api/auth/me/${userId}`);
         if (!userResponse.ok) {
           throw new Error('Failed to fetch user data');
         }
         const userData = await userResponse.json();
         setUserData(userData.data);
-
+        
+        // Auto-fill owner/director name from user data
+        setCompanyFormData(prev => ({
+          ...prev,
+          ownerDirector: userData.data.fullName
+        }));
+        
         // Fetch KYC status
         await fetchKycStatus(userId);
+        
+        // Check NFT mint status
+        const status = await checkMintStatus(userId);
+        if (status) {
+          setMintStatus(status);
+        }
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'An error occurred';
         setError(errorMessage);
@@ -86,7 +176,50 @@ export default function Dashboard() {
     };
 
     fetchUserData();
-  }, [router]);
+  }, [router]); // Removed the function dependencies that cause infinite loop
+
+  const handleCompanyFormChange = (field: string, value: string | boolean | File | null) => {
+    setCompanyFormData(prev => ({
+      ...prev,
+      [field]: value
+    }))
+  }
+
+  const addCoFounder = () => {
+    if (newCoFounder.name && newCoFounder.email) {
+      setCompanyFormData(prev => ({
+        ...prev,
+        coFounders: [...prev.coFounders, { ...newCoFounder, id: Date.now() }]
+      }))
+      setNewCoFounder({ name: '', email: '' })
+    }
+  }
+
+  const removeCoFounder = (id: number) => {
+    setCompanyFormData(prev => ({
+      ...prev,
+      coFounders: prev.coFounders.filter(cf => cf.id !== id)
+    }))
+  }
+
+  const handleFormSubmit = () => {
+    // Mock company registration
+    const mockCompanyData = {
+      registrationNumber: 'BT-' + Math.random().toString(36).substr(2, 8).toUpperCase(),
+      taxId: 'TAX-' + Math.random().toString(36).substr(2, 6).toUpperCase(),
+      registrationDate: new Date().toLocaleDateString(),
+      status: 'Active',
+      ...companyFormData
+    }
+    setCompanyData(mockCompanyData)
+    setIsSubmitted(true)
+    setShowCompanyForm(false)
+  }
+
+  const downloadCertificate = () => {
+    // Mock PDF download
+    alert('Digital Certificate would be downloaded here (PDF generation not implemented in MVP)')
+  }
 
   if (isLoading) {
     return (
@@ -107,10 +240,11 @@ export default function Dashboard() {
   const menuItems = [
     { id: 'overview', label: 'Overview', icon: 'home' },
     { id: 'kyc', label: 'KYC Status', icon: 'check', count: kycData?.status === 'pending' ? '!' : undefined },
+    { id: 'vc', label: 'Digital Wallet', icon: 'wallet' },
     { id: 'nft', label: 'Residency NFT', icon: 'badge' },
-    { id: 'company', label: 'Company Info', icon: 'building' },
+    { id: 'company', label: 'Entities', icon: 'building' },
     { id: 'documents', label: 'Documents', icon: 'document' }
-  ] as const;
+  ];
 
   const getStatusBadge = (status: KycStatus) => {
     const statusConfig = {
@@ -150,6 +284,12 @@ export default function Dashboard() {
               </span>
             )}
           </div>
+        )
+      case 'wallet':
+        return (
+          <svg className={iconProps} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+          </svg>
         )
       case 'badge':
         return (
@@ -265,12 +405,53 @@ export default function Dashboard() {
               </li>
             </ul>
             <div className="mt-6">
-              <button
-                onClick={() => setActiveSection('nft')}
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              >
-                Mint Your Residency NFT
-              </button>
+              {!mintStatus?.hasMinted ? (
+                <div className="space-y-3">
+                  {!isConnected ? (
+                    <button
+                      onClick={handleWalletConnect}
+                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
+                    >
+                      Connect Wallet
+                    </button>
+                  ) : (
+                    <div className="space-y-2">
+                      <div className="flex items-center text-sm text-gray-600">
+                        <span>Connected: {address?.slice(0, 6)}...{address?.slice(-4)}</span>
+                        <button 
+                          onClick={() => disconnect()}
+                          className="ml-2 text-red-500 hover:text-red-700"
+                        >
+                          Disconnect
+                        </button>
+                      </div>
+                      <button
+                        onClick={async () => {
+                          try {
+                            const userId = localStorage.getItem('userId');
+                            if (!userId) return;
+                            await mintNFT(userId);
+                            alert('NFT minted successfully!');
+                          } catch (error) {
+                            alert(error instanceof Error ? error.message : 'Failed to mint NFT');
+                          }
+                        }}
+                        disabled={isMinting}
+                        className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {isMinting ? 'Minting...' : 'Mint Your Residency NFT'}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <button
+                  onClick={() => setActiveSection('nft')}
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                >
+                  View Your NFT
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -416,10 +597,10 @@ export default function Dashboard() {
 
       {/* Main Container - centered with bordered card */}
       <div className="min-h-screen flex items-center justify-center p-8 relative z-10">
-        <div className="bg-white rounded-2xl shadow-lg overflow-hidden flex w-full max-w-5xl min-h-[600px]">
+        <div className="bg-white rounded-2xl shadow-lg overflow-hidden flex w-full max-w-5xl h-auto min-h-[600px] max-h-[80vh]">
           {/* Left side - Sidebar */}
-          <div className="w-72 bg-gray-50 border-r">
-            <div className="p-6">
+          <div className="w-80 bg-gray-50 border-r flex-shrink-0">
+            <div className="p-6 h-full">
               {/* User Profile */}
               <div className="mb-8">
                 <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4">
@@ -427,7 +608,7 @@ export default function Dashboard() {
                     {userData.fullName.split(' ').map(n => n[0]).join('')}
                   </span>
                 </div>
-                <h1 className="text-2xl font-bold text-gray-900">Welcome back, {userData.fullName}!</h1>
+                <h2 className="text-lg font-semibold text-gray-900">{userData.fullName}</h2>
                 <p className="text-sm text-gray-600">{userData.email}</p>
                 <div className="mt-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
                   <span className="w-2 h-2 bg-green-400 rounded-full mr-1"></span>
@@ -447,7 +628,7 @@ export default function Dashboard() {
                         : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                     }`}
                   >
-                    <span className="text-base">{renderIcon(item.icon, item.count)}</span>
+                                          <span className="text-base">{renderIcon(item.icon, 'count' in item ? (item as { count?: string }).count : undefined)}</span>
                     {item.label}
                   </button>
                 ))}
@@ -456,8 +637,8 @@ export default function Dashboard() {
           </div>
 
           {/* Right side - Main Content */}
-          <div className="flex-1 flex flex-col">
-            <div className="flex-1 p-6">
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <div className="flex-1 p-8 px-12 overflow-y-auto">
               {activeSection === 'overview' && (
                 <div className="space-y-6">
                   <div>
@@ -493,7 +674,7 @@ export default function Dashboard() {
                       </div>
                     </div>
 
-                    <div className="bg-blue-50 rounded-lg p-4">
+                    <div className="bg-gray-50 rounded-lg p-4">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
                           <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -501,8 +682,17 @@ export default function Dashboard() {
                           </svg>
                         </div>
                         <div>
-                          <p className="text-sm font-medium text-blue-900">NFT Minted</p>
-                          <p className="text-xs text-blue-700">Token {userData.nftTokenId}</p>
+                          <p className="text-sm font-medium text-blue-900">
+                            {mintStatus?.hasMinted ? 'NFT Minted' : 'Wallet Connected'}
+                          </p>
+                          <p className="text-xs text-blue-700">
+                            {mintStatus?.hasMinted 
+                              ? `Token ${mintStatus.tokenId || userData.nftTokenId}`
+                              : `${address?.slice(0, 6)}...${address?.slice(-4)}`
+                            }
+                          </p>
+                          <h3 className="text-sm font-medium text-gray-900">NFT Minted</h3>
+                          <p className="text-xs text-gray-600">Your digital identity is ready</p>
                         </div>
                       </div>
                     </div>
@@ -511,6 +701,179 @@ export default function Dashboard() {
               )}
 
               {activeSection === 'kyc' && renderKycStatus()}
+
+              {activeSection === 'vc' && (
+                <div className="space-y-6">
+                  <div>
+                    <h1 className="text-xl font-semibold text-gray-900 mb-2">
+                      Digital Credential Wallet
+                    </h1>
+                    <p className="text-sm text-gray-600">
+                      Manage your verified digital credentials and certificates.
+                    </p>
+                  </div>
+
+                  {/* Check if user is verified */}
+                  {kycData?.status === 'approved' ? (
+                    <div className="space-y-6">
+                      {/* Credential Status */}
+                      <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{backgroundColor: '#DDEEE9'}}>
+                            <svg className="w-6 h-6" style={{color: '#42976A'}} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+                            </svg>
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="text-lg font-semibold text-gray-900">Verifiable Credential Available</h3>
+                            <p className="text-sm text-gray-600">Your Bhutan eResidency credential is ready to use</p>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-white text-xs px-3 py-1.5 rounded-lg font-medium" style={{backgroundColor: '#42976A'}}>
+                              ACTIVE
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Quick Actions */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-md transition-shadow">
+                          <div className="text-center">
+                            <div className="w-12 h-12 bg-blue-50 rounded-lg mx-auto mb-4 flex items-center justify-center">
+                              <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                              </svg>
+                            </div>
+                            <h3 className="text-sm font-medium text-gray-900 mb-2">View Credential</h3>
+                            <p className="text-xs text-gray-500 mb-4">Access your digital wallet</p>
+                            <button
+                              onClick={() => window.open('/vc', '_blank')}
+                              className="text-blue-600 text-sm font-medium hover:text-blue-700 transition-colors"
+                            >
+                              Open Wallet →
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-md transition-shadow">
+                          <div className="text-center">
+                            <div className="w-12 h-12 bg-purple-50 rounded-lg mx-auto mb-4 flex items-center justify-center">
+                              <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                              </svg>
+                            </div>
+                            <h3 className="text-sm font-medium text-gray-900 mb-2">Download</h3>
+                            <p className="text-xs text-gray-500 mb-4">Save as JSON file</p>
+                            <button
+                              onClick={() => {
+                                alert('Download feature will be available in the full wallet interface');
+                              }}
+                              className="text-purple-600 text-sm font-medium hover:text-purple-700 transition-colors"
+                            >
+                              Download →
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-md transition-shadow">
+                          <div className="text-center">
+                            <div className="w-12 h-12 bg-amber-50 rounded-lg mx-auto mb-4 flex items-center justify-center">
+                              <svg className="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" />
+                              </svg>
+                            </div>
+                            <h3 className="text-sm font-medium text-gray-900 mb-2">Share</h3>
+                            <p className="text-xs text-gray-500 mb-4">Generate verification link</p>
+                            <button
+                              onClick={() => {
+                                const verifyUrl = `${window.location.origin}/verify?user=${userData.id}`;
+                                navigator.clipboard.writeText(verifyUrl);
+                                alert('Verification link copied to clipboard!');
+                              }}
+                              className="text-amber-600 text-sm font-medium hover:text-amber-700 transition-colors"
+                            >
+                              Copy Link →
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Credential Info */}
+                      <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+                        <h3 className="text-lg font-semibold text-gray-900 mb-6">Credential Information</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
+                          <div>
+                            <label className="text-gray-500 font-medium text-xs uppercase tracking-wide">Credential Type</label>
+                            <p className="text-gray-900 font-medium mt-1">Bhutan eResidency Certificate</p>
+                          </div>
+                          <div>
+                            <label className="text-gray-500 font-medium text-xs uppercase tracking-wide">Issued By</label>
+                            <p className="text-gray-900 font-medium mt-1">Kingdom of Bhutan</p>
+                          </div>
+                          <div>
+                            <label className="text-gray-500 font-medium text-xs uppercase tracking-wide">Issue Date</label>
+                            <p className="text-gray-900 font-medium mt-1">{kycData?.reviewedAt ? new Date(kycData.reviewedAt).toLocaleDateString() : 'N/A'}</p>
+                          </div>
+                          <div>
+                            <label className="text-gray-500 font-medium text-xs uppercase tracking-wide">Status</label>
+                            <div className="flex items-center gap-2 mt-1">
+                              <div className="w-2 h-2 rounded-full" style={{backgroundColor: '#42976A'}}></div>
+                              <span className="text-gray-900 font-medium">Verified & Active</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Technology Info */}
+                      <div className="bg-gray-50 border border-gray-200 rounded-xl p-6">
+                        <h3 className="text-lg font-semibold text-gray-900 mb-6">W3C Standards Compliance</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                          <div className="flex items-center gap-3">
+                            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                            <span className="text-gray-700 font-medium">Verifiable Credentials Data Model v1.1</span>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                            <span className="text-gray-700 font-medium">JSON-LD Linked Data</span>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <div className="w-2 h-2 rounded-full" style={{backgroundColor: '#42976A'}}></div>
+                            <span className="text-gray-700 font-medium">Ed25519 Digital Signatures</span>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
+                            <span className="text-gray-700 font-medium">Decentralized Identifiers (DID)</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="bg-gray-50 border border-gray-200 rounded-xl p-6">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
+                          <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.98-.833-2.75 0L4.064 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                          </svg>
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-900">Verification Required</h3>
+                          <p className="text-sm text-gray-600 mt-1">
+                            Complete your KYC verification to access your digital credential wallet.
+                          </p>
+                          <button
+                            onClick={() => setActiveSection('kyc')}
+                            className="mt-4 bg-gray-900 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors"
+                          >
+                            Complete Verification
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {activeSection === 'nft' && (
                 <div className="space-y-6">
@@ -521,6 +884,84 @@ export default function Dashboard() {
                     <p className="text-sm text-gray-600">
                       Your digital residency certificate as an NFT.
                     </p>
+                  </div>
+
+                  {/* Wallet Connection and NFT Minting */}
+                  <div className="bg-gray-50 rounded-lg p-6 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-lg font-medium text-gray-900">Wallet Connection</h3>
+                        <p className="text-sm text-gray-600">Connect your wallet to mint your NFT</p>
+                      </div>
+                      {isConnected ? (
+                        <div className="text-right">
+                          <p className="text-sm text-green-600 font-medium">
+                            Connected: {address?.slice(0, 6)}...{address?.slice(-4)}
+                          </p>
+                          <button
+                            onClick={() => disconnect()}
+                            className="text-xs text-red-600 hover:text-red-800 mt-1"
+                          >
+                            Disconnect
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={handleWalletConnect}
+                          className="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700 transition-colors"
+                        >
+                          Connect Wallet
+                        </button>
+                      )}
+                    </div>
+
+                    {isConnected && (
+                      <div className="border-t pt-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h4 className="text-md font-medium text-gray-900">Mint Your NFT</h4>
+                            <p className="text-sm text-gray-600">
+                              {mintStatus?.hasMinted 
+                                ? 'Your NFT has been minted!' 
+                                : kycData?.status === 'approved' 
+                                  ? 'Ready to mint your e-Residency NFT'
+                                  : 'Complete KYC verification first'
+                              }
+                            </p>
+                          </div>
+                          {!mintStatus?.hasMinted && (
+                            <button
+                              onClick={async () => {
+                                const userId = localStorage.getItem('userId');
+                                if (!userId) {
+                                  alert('User ID not found. Please refresh the page.');
+                                  return;
+                                }
+                                if (kycData?.status !== 'approved') {
+                                  alert('Please complete KYC verification first.');
+                                  return;
+                                }
+                                try {
+                                  const result = await mintNFT(userId);
+                                  alert(`NFT minted successfully! Token ID: ${result.tokenId}`);
+                                } catch (error) {
+                                  console.error('Minting failed:', error);
+                                  alert(`Minting failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                                }
+                              }}
+                              disabled={isMinting || kycData?.status !== 'approved'}
+                              className={`px-6 py-2 rounded-md text-sm font-medium transition-colors ${
+                                isMinting || kycData?.status !== 'approved'
+                                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                  : 'bg-blue-600 text-white hover:bg-blue-700'
+                              }`}
+                            >
+                              {isMinting ? 'Minting...' : 'Mint Your Residency NFT'}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* NFT Display */}
@@ -540,27 +981,66 @@ export default function Dashboard() {
                     <div className="space-y-3 text-sm">
                       <div className="flex justify-between">
                         <span className="text-gray-500">Token ID:</span>
-                        <span className="text-gray-900 font-medium">{userData?.nftTokenId || 'N/A'}</span>
+                        <span className="text-gray-900 font-medium">{mintStatus?.tokenId || userData?.nftTokenId || 'N/A'}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-500">Contract:</span>
-                        <span className="text-gray-900 font-mono text-xs">{userData?.nftContract || 'N/A'}</span>
+                        <span className="text-gray-900 font-mono text-xs">{mintStatus?.contractAddress || userData?.nftContract || 'N/A'}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-500">Network:</span>
-                        <span className="text-gray-900 font-medium">Ethereum</span>
+                        <span className="text-gray-900 font-medium">Polygon Mumbai</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-500">Status:</span>
-                        <span className="text-green-600 font-medium">Minted</span>
+                        <span className="text-green-600 font-medium">{mintStatus?.hasMinted ? 'Minted' : 'Not Minted'}</span>
                       </div>
+                      {mintStatus?.transactionHash && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">Tx Hash:</span>
+                          <a 
+                            href={`https://mumbai.polygonscan.com/tx/${mintStatus.transactionHash}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:text-blue-800 font-mono text-xs underline"
+                          >
+                            {mintStatus.transactionHash.slice(0, 10)}...
+                          </a>
+                        </div>
+                      )}
                     </div>
 
-                    <div className="mt-4 pt-4 border-t">
-                      <button className="w-full bg-blue-600 text-white py-2 px-4 rounded-md text-sm font-medium hover:bg-blue-700 transition-colors">
-                        View on OpenSea
-                      </button>
-                    </div>
+                    {/* Only show OpenSea button for real networks, not localhost */}
+                    {mintStatus?.hasMinted && mintStatus?.transactionHash && !mintStatus?.contractAddress?.includes('0x5FbDB2315678afecb367f032d93F642f64180aa3') && (
+                      <div className="mt-4 pt-4 border-t">
+                        <button 
+                          onClick={() => {
+                            const contractAddress = mintStatus?.contractAddress || userData?.nftContract;
+                            const tokenId = mintStatus?.tokenId || userData?.nftTokenId;
+                            if (contractAddress && tokenId) {
+                              window.open(`https://opensea.io/assets/matic/${contractAddress}/${tokenId}`, '_blank');
+                            }
+                          }}
+                          className="w-full bg-blue-600 text-white py-2 px-4 rounded-md text-sm font-medium hover:bg-blue-700 transition-colors"
+                        >
+                          View on OpenSea
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Show local blockchain info for localhost */}
+                    {mintStatus?.hasMinted && mintStatus?.contractAddress?.includes('0x5FbDB2315678afecb367f032d93F642f64180aa3') && (
+                      <div className="mt-4 pt-4 border-t">
+                        <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
+                          <p className="text-xs text-yellow-800 font-medium">
+                            🧪 Development Mode
+                          </p>
+                          <p className="text-xs text-yellow-700 mt-1">
+                            This NFT is on your local Hardhat network. Deploy to a real network (Polygon, Ethereum) to view on OpenSea.
+                          </p>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* NFT Benefits */}
@@ -578,14 +1058,419 @@ export default function Dashboard() {
 
               {activeSection === 'company' && (
                 <div className="space-y-6">
-                  <div>
-                    <h1 className="text-xl font-semibold text-gray-900 mb-2">
-                      Company Information
-                    </h1>
-                    <p className="text-sm text-gray-600">
-                      Coming soon - Set up your Druk digital company.
-                    </p>
-                  </div>
+                  {!showCompanyForm && !isSubmitted && (
+                    <div className="ml-8">
+                      <h1 className="text-xl font-semibold text-gray-900 mb-2">
+                        Entity Information
+                      </h1>
+                      <p className="text-sm text-gray-600 mb-6">
+                        Register your digital entity in Bhutan's innovative business environment.
+                      </p>
+                      
+                      <div className="bg-gray-50 rounded-lg p-6 mb-6 border border-gray-200">
+                        <h3 className="text-lg font-medium text-gray-900 mb-3">Why Register in Bhutan?</h3>
+                        <ul className="text-sm text-gray-700 space-y-2">
+                          <li>• Full digital incorporation process</li>
+                          <li>• Blockchain-verified certificates</li>
+                          <li>• Crypto-friendly regulations</li>
+                          <li>• International market access</li>
+                          <li>• Virtual office solutions</li>
+                        </ul>
+                      </div>
+
+                      <button
+                        onClick={() => setShowCompanyForm(true)}
+                        className="bg-gray-900 text-white px-4 py-2 rounded-lg font-medium hover:bg-gray-800 transition-colors text-sm"
+                      >
+                        Apply for Entity Registration
+                      </button>
+                    </div>
+                  )}
+
+                  {showCompanyForm && (
+                    <div className="ml-8">
+                      <div className="flex items-center justify-between mb-6">
+                        <h1 className="text-xl font-semibold text-gray-900">
+                          Entity Registration
+                        </h1>
+                        <button
+                          onClick={() => setShowCompanyForm(false)}
+                          className="text-gray-500 hover:text-gray-700"
+                        >
+                          ✕
+                        </button>
+                      </div>
+
+                      {/* Progress Steps */}
+                      <div className="mb-6">
+                        <div className="flex items-center justify-between">
+                          {[1, 2, 3, 4].map((step) => (
+                            <div key={step} className="flex items-center">
+                              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                                currentFormStep >= step 
+                                  ? 'bg-gray-900 text-white' 
+                                  : 'bg-gray-200 text-gray-500'
+                              }`}>
+                                {step}
+                              </div>
+                              {step < 4 && (
+                                <div className={`w-12 h-0.5 mx-2 ${
+                                  currentFormStep > step ? 'bg-gray-900' : 'bg-gray-200'
+                                }`} />
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                        <div className="flex justify-between mt-2 text-xs text-gray-600">
+                          <span>Basic Info</span>
+                          <span>Ownership</span>
+                          <span>Documentation</span>
+                          <span>Payment</span>
+                        </div>
+                      </div>
+
+                      {/* Step 1: Basic Company Info */}
+                      {currentFormStep === 1 && (
+                        <div className="space-y-4">
+                          <h2 className="text-lg font-medium text-gray-900">Section 1: Basic Company Info</h2>
+                          
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Company Name *
+                            </label>
+                            <input
+                              type="text"
+                              value={companyFormData.companyName}
+                              onChange={(e) => handleCompanyFormChange('companyName', e.target.value)}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-gray-900 focus:border-gray-900 outline-none"
+                              placeholder="Enter your company name"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Company Type *
+                            </label>
+                            <select
+                              value={companyFormData.companyType}
+                              onChange={(e) => handleCompanyFormChange('companyType', e.target.value)}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-gray-900 focus:border-gray-900 outline-none"
+                            >
+                              <option value="">Select company type</option>
+                              <option value="LLC">LLC</option>
+                              <option value="DAO">DAO</option>
+                              <option value="SoloOp">SoloOp</option>
+                              <option value="Co-operative">Co-operative</option>
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Business Activity *
+                            </label>
+                            <textarea
+                              value={companyFormData.businessActivity}
+                              onChange={(e) => handleCompanyFormChange('businessActivity', e.target.value)}
+                              rows={3}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-gray-900 focus:border-gray-900 outline-none"
+                              placeholder="Describe what your company does"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Jurisdiction
+                            </label>
+                            <select
+                              value={companyFormData.jurisdiction}
+                              onChange={(e) => handleCompanyFormChange('jurisdiction', e.target.value)}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-gray-900 focus:border-gray-900 outline-none"
+                            >
+                              <option value="Bhutan">Bhutan</option>
+                              <option value="Future">Future Jurisdictions</option>
+                            </select>
+                          </div>
+
+                          <div className="flex items-center">
+                            <input
+                              type="checkbox"
+                              id="virtualOffice"
+                              checked={companyFormData.virtualOfficeOptIn}
+                              onChange={(e) => handleCompanyFormChange('virtualOfficeOptIn', e.target.checked)}
+                              className="mr-2"
+                            />
+                            <label htmlFor="virtualOffice" className="text-sm text-gray-700">
+                              Opt-in for Virtual Office Address
+                            </label>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Step 2: Ownership & Control */}
+                      {currentFormStep === 2 && (
+                        <div className="space-y-4">
+                          <h2 className="text-lg font-medium text-gray-900">Section 2: Ownership & Control</h2>
+                          
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Owner/Director
+                            </label>
+                            <input
+                              type="text"
+                              value={companyFormData.ownerDirector}
+                              readOnly
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm bg-gray-50"
+                            />
+                            <p className="text-xs text-gray-500 mt-1">Auto-filled from your e-Residency profile</p>
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Co-founders (Optional)
+                            </label>
+                            
+                            {companyFormData.coFounders.map((coFounder) => (
+                              <div key={coFounder.id} className="flex items-center gap-2 mb-2">
+                                <span className="text-sm text-gray-700 flex-1">
+                                  {coFounder.name} ({coFounder.email})
+                                </span>
+                                <button
+                                  onClick={() => removeCoFounder(coFounder.id)}
+                                  className="text-red-500 hover:text-red-700 text-sm"
+                                >
+                                  Remove
+                                </button>
+                              </div>
+                            ))}
+
+                            <div className="space-y-2 mt-2">
+                              <div className="flex flex-col sm:flex-row gap-2">
+                                <input
+                                  type="text"
+                                  placeholder="Co-founder name"
+                                  value={newCoFounder.name}
+                                  onChange={(e) => setNewCoFounder(prev => ({...prev, name: e.target.value}))}
+                                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-gray-900 focus:border-gray-900 outline-none"
+                                />
+                                <input
+                                  type="email"
+                                  placeholder="Co-founder email"
+                                  value={newCoFounder.email}
+                                  onChange={(e) => setNewCoFounder(prev => ({...prev, email: e.target.value}))}
+                                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-gray-900 focus:border-gray-900 outline-none"
+                                />
+                              </div>
+                              <button
+                                onClick={addCoFounder}
+                                className="w-full sm:w-auto px-4 py-2 bg-gray-200 text-gray-700 rounded-md text-sm hover:bg-gray-300 transition-colors"
+                              >
+                                Add Co-founder
+                              </button>
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Governance Model *
+                            </label>
+                            <select
+                              value={companyFormData.governanceModel}
+                              onChange={(e) => handleCompanyFormChange('governanceModel', e.target.value)}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-gray-900 focus:border-gray-900 outline-none"
+                            >
+                              <option value="">Select governance model</option>
+                              <option value="Centralized">Centralized</option>
+                              <option value="Multi-sig">Multi-sig</option>
+                              <option value="Token Voting">Token Voting (for DAOs)</option>
+                            </select>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Step 3: Documentation */}
+                      {currentFormStep === 3 && (
+                        <div className="space-y-4">
+                          <h2 className="text-lg font-medium text-gray-900">Section 3: Documentation</h2>
+                          
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Upload Bylaws / Charter (Optional)
+                            </label>
+                            <input
+                              type="file"
+                              accept=".pdf,.doc,.docx"
+                              onChange={(e) => handleCompanyFormChange('bylawsFile', e.target.files?.[0] || null)}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-gray-900 focus:border-gray-900 outline-none"
+                            />
+                            <p className="text-xs text-gray-500 mt-1">PDF, DOC, or DOCX files only</p>
+                          </div>
+
+                          <div className="bg-gray-50 rounded-lg p-4">
+                            <div className="flex items-start">
+                              <input
+                                type="checkbox"
+                                id="termsAccepted"
+                                checked={companyFormData.termsAccepted}
+                                onChange={(e) => handleCompanyFormChange('termsAccepted', e.target.checked)}
+                                className="mt-1 mr-3"
+                              />
+                              <label htmlFor="termsAccepted" className="text-sm text-gray-700">
+                                I agree to Bhutan's digital incorporation rules and understand that this registration will be recorded on the blockchain for transparency and verification purposes.
+                              </label>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Step 4: Payment */}
+                      {currentFormStep === 4 && (
+                        <div className="space-y-6">
+                          <h2 className="text-lg font-medium text-gray-900">Section 4: Payment</h2>
+                          
+                          {/* Pricing Summary */}
+                          <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                            <h3 className="text-sm font-medium text-gray-900 mb-3">Order Summary</h3>
+                            <div className="space-y-2 text-sm">
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Entity Registration Fee</span>
+                                <span className="text-gray-900">$299.00</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Processing Fee</span>
+                                <span className="text-gray-900">$9.00</span>
+                              </div>
+                              {companyFormData.virtualOfficeOptIn && (
+                                <div className="flex justify-between">
+                                  <span className="text-gray-600">Virtual Office (Annual)</span>
+                                  <span className="text-gray-900">$120.00</span>
+                                </div>
+                              )}
+                              <div className="border-t pt-2 mt-2">
+                                <div className="flex justify-between font-medium">
+                                  <span className="text-gray-900">Total (USD)</span>
+                                  <span className="text-gray-900">
+                                    ${companyFormData.virtualOfficeOptIn ? '428.00' : '308.00'}
+                                  </span>
+                                </div>
+                                <div className="flex justify-between mt-1">
+                                  <span className="text-gray-600 text-xs">Bitcoin Amount</span>
+                                  <span className="text-gray-900 text-xs font-mono">
+                                    ≈ {companyFormData.virtualOfficeOptIn ? '0.00614' : '0.00442'} BTC
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Form Navigation */}
+                      <div className="flex justify-between pt-6 border-t">
+                        <button
+                          onClick={() => currentFormStep > 1 ? setCurrentFormStep(currentFormStep - 1) : setShowCompanyForm(false)}
+                          className="text-gray-600 hover:text-gray-800 font-medium text-sm"
+                        >
+                          {currentFormStep > 1 ? '← Previous' : 'Cancel'}
+                        </button>
+                        
+                        <button
+                          onClick={() => {
+                            if (currentFormStep < 4) {
+                              setCurrentFormStep(currentFormStep + 1)
+                            } else {
+                              handleFormSubmit()
+                            }
+                          }}
+                          disabled={
+                            (currentFormStep === 1 && (!companyFormData.companyName || !companyFormData.companyType || !companyFormData.businessActivity)) ||
+                            (currentFormStep === 2 && !companyFormData.governanceModel) ||
+                            (currentFormStep === 3 && !companyFormData.termsAccepted) ||
+                            (currentFormStep === 4 && (!companyFormData.bitcoinAddress || !companyFormData.paymentConfirmed))
+                          }
+                          className="bg-gray-900 text-white px-6 py-2 rounded-md font-medium text-sm hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                        >
+                          {currentFormStep === 4 ? 'Submit Registration' : 'Continue →'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {isSubmitted && companyData && (
+                    <div className="ml-8 space-y-6">
+                      <div className="text-center">
+                        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                        </div>
+                        <h2 className="text-xl font-semibold text-gray-900 mb-2">
+                          Entity Registered Successfully!
+                        </h2>
+                        <p className="text-sm text-gray-600">
+                          Your entity has been incorporated in Bhutan's digital registry.
+                        </p>
+                      </div>
+
+                      <div className="bg-gray-50 rounded-lg p-4">
+                        <h3 className="text-sm font-medium text-gray-900 mb-3">Company Details</h3>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-gray-500">Company Name:</span>
+                            <span className="text-gray-900 font-medium">{companyData.companyName}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-500">Registration Number:</span>
+                            <span className="text-gray-900 font-medium">{companyData.registrationNumber}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-500">Tax ID:</span>
+                            <span className="text-gray-900 font-medium">{companyData.taxId}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-500">Registration Date:</span>
+                            <span className="text-gray-900 font-medium">{companyData.registrationDate}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-500">Status:</span>
+                            <span className="text-green-600 font-medium">{companyData.status}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-3">
+                        <button
+                          onClick={downloadCertificate}
+                          className="flex-1 bg-gray-900 text-white py-2 px-4 rounded-md text-sm font-medium hover:bg-gray-800 transition-colors"
+                        >
+                          Download Digital Certificate
+                        </button>
+                        <button
+                          onClick={() => {
+                            setIsSubmitted(false)
+                            setCompanyData(null)
+                            setCompanyFormData({
+                              companyName: '',
+                              companyType: '',
+                              businessActivity: '',
+                              jurisdiction: 'Bhutan',
+                              virtualOfficeOptIn: false,
+                              ownerDirector: '',
+                              coFounders: [],
+                              governanceModel: '',
+                              bylawsFile: null,
+                              termsAccepted: false,
+                              bitcoinAddress: '',
+                              paymentConfirmed: false
+                            })
+                            setCurrentFormStep(1)
+                          }}
+                          className="flex-1 border border-gray-300 text-gray-700 py-2 px-4 rounded-md text-sm font-medium hover:bg-gray-50 transition-colors"
+                        >
+                          Register Another Company
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
