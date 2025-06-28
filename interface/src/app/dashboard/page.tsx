@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useNFTMint } from '@/hooks/useNFTMint';
 
 type KycStatus = 'not_submitted' | 'pending' | 'approved' | 'rejected' | 'in_review';
 
@@ -38,6 +39,19 @@ export default function Dashboard() {
   const [isKycLoading, setIsKycLoading] = useState(false);
   const [error, setError] = useState('');
   const router = useRouter();
+  
+  // Wallet and NFT minting
+  const { 
+    address, 
+    isConnected, 
+    connectWallet, 
+    disconnect,
+    mintNFT, 
+    checkMintStatus, 
+    isLoading: isMinting, 
+    mintStatus,
+    setMintStatus 
+  } = useNFTMint();
 
   const fetchKycStatus = async (userId: string) => {
     try {
@@ -76,6 +90,12 @@ export default function Dashboard() {
 
         // Fetch KYC status
         await fetchKycStatus(userId);
+        
+        // Check NFT mint status
+        const status = await checkMintStatus(userId);
+        if (status) {
+          setMintStatus(status);
+        }
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'An error occurred';
         setError(errorMessage);
@@ -86,7 +106,7 @@ export default function Dashboard() {
     };
 
     fetchUserData();
-  }, [router]);
+  }, [router]); // Removed the function dependencies that cause infinite loop
 
   if (isLoading) {
     return (
@@ -265,12 +285,53 @@ export default function Dashboard() {
               </li>
             </ul>
             <div className="mt-6">
-              <button
-                onClick={() => setActiveSection('nft')}
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              >
-                Mint Your Residency NFT
-              </button>
+              {!mintStatus?.hasMinted ? (
+                <div className="space-y-3">
+                  {!isConnected ? (
+                    <button
+                      onClick={connectWallet}
+                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
+                    >
+                      Connect Wallet
+                    </button>
+                  ) : (
+                    <div className="space-y-2">
+                      <div className="flex items-center text-sm text-gray-600">
+                        <span>Connected: {address?.slice(0, 6)}...{address?.slice(-4)}</span>
+                        <button 
+                          onClick={() => disconnect()}
+                          className="ml-2 text-red-500 hover:text-red-700"
+                        >
+                          Disconnect
+                        </button>
+                      </div>
+                      <button
+                        onClick={async () => {
+                          try {
+                            const userId = localStorage.getItem('userId');
+                            if (!userId) return;
+                            await mintNFT(userId);
+                            alert('NFT minted successfully!');
+                          } catch (error) {
+                            alert(error instanceof Error ? error.message : 'Failed to mint NFT');
+                          }
+                        }}
+                        disabled={isMinting}
+                        className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {isMinting ? 'Minting...' : 'Mint Your Residency NFT'}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <button
+                  onClick={() => setActiveSection('nft')}
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                >
+                  View Your NFT
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -447,7 +508,7 @@ export default function Dashboard() {
                         : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                     }`}
                   >
-                    <span className="text-base">{renderIcon(item.icon, item.count)}</span>
+                    <span className="text-base">{renderIcon(item.icon, 'count' in item ? item.count : undefined)}</span>
                     {item.label}
                   </button>
                 ))}
@@ -540,20 +601,33 @@ export default function Dashboard() {
                     <div className="space-y-3 text-sm">
                       <div className="flex justify-between">
                         <span className="text-gray-500">Token ID:</span>
-                        <span className="text-gray-900 font-medium">{userData?.nftTokenId || 'N/A'}</span>
+                        <span className="text-gray-900 font-medium">{mintStatus?.tokenId || userData?.nftTokenId || 'N/A'}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-500">Contract:</span>
-                        <span className="text-gray-900 font-mono text-xs">{userData?.nftContract || 'N/A'}</span>
+                        <span className="text-gray-900 font-mono text-xs">{mintStatus?.contractAddress || userData?.nftContract || 'N/A'}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-500">Network:</span>
-                        <span className="text-gray-900 font-medium">Ethereum</span>
+                        <span className="text-gray-900 font-medium">Polygon Mumbai</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-500">Status:</span>
-                        <span className="text-green-600 font-medium">Minted</span>
+                        <span className="text-green-600 font-medium">{mintStatus?.hasMinted ? 'Minted' : 'Not Minted'}</span>
                       </div>
+                      {mintStatus?.transactionHash && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">Tx Hash:</span>
+                          <a 
+                            href={`https://mumbai.polygonscan.com/tx/${mintStatus.transactionHash}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:text-blue-800 font-mono text-xs underline"
+                          >
+                            {mintStatus.transactionHash.slice(0, 10)}...
+                          </a>
+                        </div>
+                      )}
                     </div>
 
                     <div className="mt-4 pt-4 border-t">

@@ -1,7 +1,9 @@
 import { ethers } from 'ethers';
 import dotenv from 'dotenv';
+import mongoose from 'mongoose';
 import Residency from '../models/Residency.js';
 import User from '../models/User.js';
+import Kyc from '../models/Kyc.js';
 
 dotenv.config();
 
@@ -141,11 +143,14 @@ export const mintResidencyNFT = async (req, res) => {
         error: 'User not found' 
       });
     }
-    
-    if (user.kycStatus !== 'approved') {
+
+    // Check KYC status from Kyc model
+    const kyc = await Kyc.findOne({ user: userId }).session(session);
+    if (!kyc || kyc.status !== 'approved') {
       await session.abortTransaction();
       return res.status(403).json({ 
-        error: 'KYC verification not approved' 
+        error: 'KYC verification not approved',
+        kycStatus: kyc?.status || 'not_found'
       });
     }
     
