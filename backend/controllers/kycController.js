@@ -1,0 +1,61 @@
+import asyncHandler from 'express-async-handler';
+import Kyc from '../models/Kyc.js';
+
+// @desc    Submit KYC data
+// @route   POST /api/kyc/submit
+// @access  Public (or Protected if needed)
+export const submitKyc = asyncHandler(async (req, res) => {
+  const { fullName, email, address } = req.body;
+  // For now assume frontend uploads files elsewhere and passes URLs; extend with multer later
+  const { passportUrl, selfieUrl } = req.body;
+
+  const kyc = await Kyc.create({
+    fullName,
+    email,
+    passportUrl,
+    selfieUrl,
+    address,
+  });
+
+  res.status(201).json({ message: 'KYC submitted', kycId: kyc._id });
+});
+
+// @desc   Get all KYC submissions (admin)
+// @route  GET /api/kyc
+export const getKycStatus = asyncHandler(async (req, res) => {
+  const { userId } = req.params;
+  const kyc = await Kyc.findOne({ _id: userId });
+  if (!kyc) return res.status(404).json({ status: 'not_found' });
+  res.json({ status: kyc.status });
+});
+
+export const getAllKyc = asyncHandler(async (req, res) => {
+  const list = await Kyc.find().sort({ createdAt: -1 });
+  res.json(list);
+});
+
+// @desc   Approve / Reject KYC
+// @route  PUT /api/kyc/:id
+export const updateKycStatus = asyncHandler(async (req, res) => {
+  const { status } = req.body; // expected 'approved' or 'rejected'
+  if (!['approved', 'rejected'].includes(status)) {
+    return res.status(400).json({ message: 'Invalid status' });
+  }
+  const kyc = await Kyc.findById(req.params.id);
+  if (!kyc) {
+    return res.status(404).json({ message: 'Not found' });
+  }
+  kyc.status = status;
+  await kyc.save();
+  res.json({ message: `KYC ${status}`, kyc });
+});
+
+export const approveKyc = asyncHandler(async (req, res) => {
+  req.body.status = 'approved';
+  return updateKycStatus(req, res);
+});
+
+export const rejectKyc = asyncHandler(async (req, res) => {
+  req.body.status = 'rejected';
+  return updateKycStatus(req, res);
+});
