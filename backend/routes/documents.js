@@ -1,12 +1,17 @@
-const express = require('express');
+import express from 'express';
+import { check, validationResult } from 'express-validator';
+import { protect, authorize } from '../middleware/auth.js';
+import Document from '../models/Document.js';
+import User from '../models/User.js';
+import path from 'path';
+import fs from 'fs';
+import multer from 'multer';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 const router = express.Router();
-const { check, validationResult } = require('express-validator');
-const { protect, authorize } = require('../middleware/auth');
-const Document = require('../models/Document');
-const User = require('../models/User');
-const path = require('path');
-const fs = require('fs');
-const multer = require('multer');
 
 // Set up multer for file uploads
 const storage = multer.diskStorage({
@@ -404,4 +409,4 @@ router.get('/stats/overview', [protect, authorize('admin')], async (req, res) =>
   }
 });
 
-module.exports = router;
+export default router;

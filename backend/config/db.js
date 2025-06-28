@@ -12,5 +12,5 @@ const connectDB = async () => {
     process.exit(1);
   }
 };
-
+console.log("mongodb connected")
 export default connectDB;

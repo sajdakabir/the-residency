@@ -1,7 +1,6 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
-import mongoose from 'mongoose';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import helmet from 'helmet';
@@ -11,6 +10,7 @@ import xss from 'xss-clean';
 import hpp from 'hpp';
 import cookieParser from 'cookie-parser';
 import compression from 'compression';
+import connectDB from './config/db.js';
 import { auditLogger } from './middleware/auditLog.js';
 import { errorHandler, notFound } from './middleware/errorMiddleware.js';
 import { initScheduledJobs } from './utils/scheduler.js';
@@ -22,7 +22,7 @@ const __dirname = path.dirname(__filename);
 // Import routes
 import authRoutes from './routes/auth.js';
 import userRoutes from './routes/users.js';
-import applicationRoutes from './routes/applications.js';
+import applicationRoutes from './routes/applicationRoutes.js';
 import documentRoutes from './routes/documents.js';
 
 const app = express();
@@ -81,25 +81,6 @@ app.use(compression());
 // Audit logging
 app.use(auditLogger);
 
-// Database connection
-const DB = process.env.MONGO_URI.replace(
-  '<PASSWORD>',
-  encodeURIComponent(process.env.MONGO_PASSWORD)
-);
-
-mongoose
-  .connect(DB, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-    useCreateIndex: true,
-    useFindAndModify: false
-  })
-  .then(() => console.log('MongoDB connected successfully'))
-  .catch(err => {
-    console.error('MongoDB connection error:', err);
-    process.exit(1);
-  });
-
 // Initialize scheduled jobs
 if (process.env.NODE_ENV !== 'test') {
   initScheduledJobs();
@@ -140,24 +121,45 @@ app.all('*', (req, res, next) => {
 // Error handling middleware
 app.use(errorHandler);
 
-const PORT = process.env.PORT || 8000;
-const server = app.listen(PORT, () => {
-  console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
-});
-
-// Handle unhandled promise rejections
-process.on('unhandledRejection', (err) => {
-  console.error('UNHANDLED REJECTION! 💥 Shutting down...');
-  console.error(err.name, err.message);
-  server.close(() => {
+const startServer = async () => {
+  try {
+    // Connect to MongoDB
+    await connectDB();
+    
+    // Initialize scheduled jobs
+    if (process.env.NODE_ENV === 'production') {
+      initScheduledJobs();
+    }
+    
+    const PORT = process.env.PORT || 8000;
+    
+    const server = app.listen(PORT, () => {
+      console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
+    });
+    
+    // Handle unhandled promise rejections
+    process.on('unhandledRejection', (err) => {
+      console.error('UNHANDLED REJECTION! 💥 Shutting down...');
+      console.error(err.name, err.message);
+      server.close(() => {
+        process.exit(1);
+      });
+    });
+    
+  } catch (error) {
+    console.error('Failed to start server:', error);
     process.exit(1);
-  });
-});
+  }
+};
+
+// Start the server
+startServer();
 
 // Handle uncaught exceptions
 process.on('uncaughtException', (err) => {
-  console.error('UNCAUGHT EXCEPTION! 💥 Shutting down...');
+  console.error('UNCAUGHT EXCEPTION! Shutting down...');
   console.error(err.name, err.message);
+  process.exit(1);
   server.close(() => {
     process.exit(1);
   });

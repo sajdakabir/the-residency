@@ -1,12 +1,13 @@
-const express = require('express');
-const router = express.Router();
-const { 
+import express from 'express';
+import { 
   register, 
   login, 
   getMe, 
   logout, 
   protect 
-} = require('../middleware/auth');
+} from '../middleware/auth.js';
+
+const router = express.Router();
 
 // Public routes
 router.post('/register', register);
@@ -16,4 +17,4 @@ router.get('/logout', logout);
 // Protected routes (require authentication)
 router.get('/me', protect, getMe);
 
-module.exports = router;
+export default router;
