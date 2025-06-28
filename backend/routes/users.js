@@ -1,8 +1,9 @@
-const express = require('express');
+import express from 'express';
+import { protect, authorize } from '../middleware/auth.js';
+import User from '../models/User.js';
+import { check, validationResult } from 'express-validator';
+
 const router = express.Router();
-const { protect, authorize } = require('../middleware/auth');
-const User = require('../models/User');
-const { check, validationResult } = require('express-validator');
 
 // @desc    Get current user profile
 // @route   GET /api/users/me
@@ -251,4 +252,4 @@ router.delete('/:id', [protect, authorize('admin')], async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;

@@ -49,10 +49,11 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
+// Initialize multer upload
 const upload = multer({
   storage,
   fileFilter,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
 });
 
 // @desc    Upload a document
@@ -60,13 +61,11 @@ const upload = multer({
 // @access  Private
 router.post(
   '/upload',
+  protect,
+  upload.single('file'),
   [
-    protect,
-    upload.single('file'),
-    [
-      check('type', 'Document type is required').not().isEmpty(),
-      check('name', 'Document name is required').not().isEmpty(),
-    ],
+    check('type', 'Document type is required').not().isEmpty(),
+    check('name', 'Document name is required').not().isEmpty(),
   ],
   async (req, res) => {
     const errors = validationResult(req);
