@@ -3,20 +3,26 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
+type KycStatus = 'not_submitted' | 'pending' | 'approved' | 'rejected' | 'in_review';
+
+type KycData = {
+  hasKyc: boolean;
+  status: KycStatus;
+  submittedAt?: string;
+  reviewedAt?: string | null;
+  comments?: string | null;
+  user?: {
+    fullName: string;
+    email: string;
+  } | null;
+};
+
 type UserData = {
   id: string;
   fullName: string;
   email: string;
   passportNumber?: string;
-  kyc?: {
-    status: string;
-    submittedAt: string;
-    selfieUrl?: string;
-    address?: string;
-    country?: string;
-  } | null;
-  hasKyc: boolean;
-  kycStatus: string;
+  kycStatus: KycStatus;
   nftTokenId?: string;
   nftContract?: string;
   applicationDate?: string;
@@ -27,9 +33,29 @@ type UserData = {
 export default function Dashboard() {
   const [activeSection, setActiveSection] = useState('overview');
   const [userData, setUserData] = useState<UserData | null>(null);
+  const [kycData, setKycData] = useState<KycData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isKycLoading, setIsKycLoading] = useState(false);
   const [error, setError] = useState('');
   const router = useRouter();
+
+  const fetchKycStatus = async (userId: string) => {
+    try {
+      setIsKycLoading(true);
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/kyc/status/${userId}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch KYC status');
+      }
+      const data = await response.json();
+      if (data.success && data.data) {
+        setKycData(data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching KYC status:', error);
+    } finally {
+      setIsKycLoading(false);
+    }
+  };
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -40,17 +66,20 @@ export default function Dashboard() {
           return;
         }
 
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/me/${userId}`);
-        if (!response.ok) {
+        // Fetch user data
+        const userResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/me/${userId}`);
+        if (!userResponse.ok) {
           throw new Error('Failed to fetch user data');
         }
+        const userData = await userResponse.json();
+        setUserData(userData.data);
 
-        const data = await response.json();
-        setUserData(data.data);
+        // Fetch KYC status
+        await fetchKycStatus(userId);
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'An error occurred';
         setError(errorMessage);
-        console.error('Error fetching user data:', error);
+        console.error('Error:', error);
       } finally {
         setIsLoading(false);
       }
@@ -77,13 +106,29 @@ export default function Dashboard() {
 
   const menuItems = [
     { id: 'overview', label: 'Overview', icon: 'home' },
-    { id: 'kyc', label: 'KYC Status', icon: 'check' },
+    { id: 'kyc', label: 'KYC Status', icon: 'check', count: kycData?.status === 'pending' ? '!' : undefined },
     { id: 'nft', label: 'Residency NFT', icon: 'badge' },
     { id: 'company', label: 'Company Info', icon: 'building' },
     { id: 'documents', label: 'Documents', icon: 'document' }
-  ]
+  ] as const;
 
-  const renderIcon = (iconType: string) => {
+  const getStatusBadge = (status: KycStatus) => {
+    const statusConfig = {
+      not_submitted: { label: 'Not Submitted', color: 'bg-gray-100 text-gray-800' },
+      pending: { label: 'Pending Review', color: 'bg-yellow-100 text-yellow-800' },
+      approved: { label: 'Approved', color: 'bg-green-100 text-green-800' },
+      rejected: { label: 'Rejected', color: 'bg-red-100 text-red-800' },
+      in_review: { label: 'In Review', color: 'bg-blue-100 text-blue-800' },
+    };
+    const config = statusConfig[status] || statusConfig.not_submitted;
+    return (
+      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${config.color}`}>
+        {config.label}
+      </span>
+    );
+  };
+
+  const renderIcon = (iconType: string, count?: string) => {
     const iconProps = "w-4 h-4 text-current"
     
     switch(iconType) {
@@ -95,9 +140,16 @@ export default function Dashboard() {
         )
       case 'check':
         return (
-          <svg className={iconProps} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
+          <div className="relative">
+            <svg className={iconProps} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            {count && (
+              <span className="absolute -top-2 -right-2 h-4 w-4 flex items-center justify-center rounded-full bg-red-500 text-white text-xs">
+                {count}
+              </span>
+            )}
+          </div>
         )
       case 'badge':
         return (
@@ -121,6 +173,67 @@ export default function Dashboard() {
         return null
     }
   }
+
+  const renderKycStatus = () => {
+    if (isKycLoading) {
+      return (
+        <div className="p-4 bg-white rounded-lg shadow">
+          <div className="animate-pulse space-y-4">
+            <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+            <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+          </div>
+        </div>
+      );
+    }
+
+    if (!kycData) return null;
+
+    return (
+      <div className="space-y-6">
+        <div className="bg-white overflow-hidden shadow rounded-lg">
+          <div className="px-4 py-5 sm:p-6">
+            <h3 className="text-lg leading-6 font-medium text-gray-900">KYC Status</h3>
+            <div className="mt-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Current Status</p>
+                  <div className="mt-1">
+                    {getStatusBadge(kycData.status)}
+                  </div>
+                </div>
+                {kycData.status === 'approved' && kycData.reviewedAt && (
+                  <div className="text-right">
+                    <p className="text-sm font-medium text-gray-500">Approved On</p>
+                    <p className="text-sm text-gray-900">
+                      {new Date(kycData.reviewedAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {kycData.status === 'rejected' && kycData.comments && (
+                <div className="mt-4">
+                  <p className="text-sm font-medium text-gray-500">Comments</p>
+                  <p className="mt-1 text-sm text-gray-900">{kycData.comments}</p>
+                </div>
+              )}
+
+              {kycData.status === 'not_submitted' && (
+                <div className="mt-6">
+                  <button
+                    onClick={() => router.push('/')}
+                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                  >
+                    Start KYC Verification
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 relative">
@@ -186,7 +299,7 @@ export default function Dashboard() {
                         : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                     }`}
                   >
-                    <span className="text-base">{renderIcon(item.icon)}</span>
+                    <span className="text-base">{renderIcon(item.icon, item.count)}</span>
                     {item.label}
                   </button>
                 ))}
@@ -249,70 +362,7 @@ export default function Dashboard() {
                 </div>
               )}
 
-              {activeSection === 'kyc' && (
-                <div className="space-y-6">
-                  <div>
-                    <h1 className="text-xl font-semibold text-gray-900 mb-2">
-                      KYC Status
-                    </h1>
-                    <p className="text-sm text-gray-600">
-                      Your identity verification status and details.
-                    </p>
-                  </div>
-
-                  {/* KYC Status Card */}
-                  <div className="border border-gray-200 rounded-lg p-4">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                        <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                      </div>
-                      <div>
-                        <h3 className="text-lg font-medium text-gray-900">Approved</h3>
-                        <p className="text-sm text-gray-600">Your identity has been successfully verified</p>
-                      </div>
-                    </div>
-
-                    <div className="space-y-3 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">Application Date:</span>
-                        <span className="text-gray-900 font-medium">{userData.applicationDate}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">Approval Date:</span>
-                        <span className="text-gray-900 font-medium">{userData.approvalDate}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">Residency ID:</span>
-                        <span className="text-gray-900 font-medium">{userData.residencyId}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Verification Steps */}
-                  <div className="space-y-3">
-                    <h4 className="text-sm font-medium text-gray-900">Verification Steps Completed:</h4>
-                    <div className="space-y-2">
-                      {[
-                        'Personal Information',
-                        'Document Verification',
-                        'Identity Verification (Selfie)',
-                        'Compliance Questions'
-                      ].map((step, index) => (
-                        <div key={index} className="flex items-center gap-2">
-                          <div className="w-4 h-4 bg-green-100 rounded-full flex items-center justify-center">
-                            <svg className="w-2.5 h-2.5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                            </svg>
-                          </div>
-                          <span className="text-sm text-gray-700">{step}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
+              {activeSection === 'kyc' && renderKycStatus()}
 
               {activeSection === 'nft' && (
                 <div className="space-y-6">
