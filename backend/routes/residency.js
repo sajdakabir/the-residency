@@ -9,4 +9,5 @@ router.get('/status/:userId', checkMintStatus);
 // Mint new residency NFT
 router.post('/mint', mintResidencyNFT);
 
+
 export default router;

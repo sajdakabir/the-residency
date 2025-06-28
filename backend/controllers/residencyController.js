@@ -8,17 +8,20 @@ import Kyc from '../models/Kyc.js';
 dotenv.config();
 
 // Configuration
-const CONTRACT_ADDRESS = process.env.ERESIDENCY_NFT_CONTRACT_ADDRESS;
-const PRIVATE_KEY = process.env.WALLET_PRIVATE_KEY;
-const RPC_URL = process.env.POLYGON_RPC_URL || 'https://polygon-amoy.g.alchemy.com/v2/03HS00LLlaFH3bVKly11J';
-const METADATA_BASE_URI = process.env.METADATA_BASE_URI || 'https://api.eresidency.example.com/metadata';
+const CONTRACT_ADDRESS = process.env.ERESIDENCY_NFT_CONTRACT_ADDRESS ;
+const PRIVATE_KEY = process.env.WALLET_PRIVATE_KEY ;
+const RPC_URL = process.env.POLYGON_RPC_URL ;
+const METADATA_BASE_URI = process.env.METADATA_BASE_URI ;
 
-// Validate required environment variables
+console.log(CONTRACT_ADDRESS, PRIVATE_KEY, RPC_URL, METADATA_BASE_URI);
+
+
+// Validate configuration
 if (!CONTRACT_ADDRESS) {
-  throw new Error('ERESIDENCY_NFT_CONTRACT_ADDRESS is not defined in environment variables');
+  console.warn('Using default contract address for local development');
 }
 if (!PRIVATE_KEY) {
-  throw new Error('WALLET_PRIVATE_KEY is not defined in environment variables');
+  console.warn('Using default private key for local development');
 }
 
 // Initialize provider and signer with error handling

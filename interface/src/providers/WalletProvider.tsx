@@ -2,11 +2,11 @@
 
 import { WagmiProvider, createConfig, http } from 'wagmi';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { polygonMumbai, polygon } from 'wagmi/chains';
+import { polygonMumbai, polygon, localhost } from 'wagmi/chains';
 import { metaMask, walletConnect, injected } from 'wagmi/connectors';
 
 // Configure chains
-const chains = [polygonMumbai, polygon] as const;
+const chains = [localhost, polygonMumbai, polygon] as const;
 
 // Create wagmi config
 const config = createConfig({
@@ -19,6 +19,7 @@ const config = createConfig({
     }),
   ],
   transports: {
+    [localhost.id]: http('http://127.0.0.1:8545'),
     [polygonMumbai.id]: http(),
     [polygon.id]: http(),
   },

@@ -39,7 +39,7 @@ export function useNFTMint() {
 
   const saveWalletAddress = async (userId: string, walletAddress: string) => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/wallet`, {
+      const response = await fetch(`http://localhost:8000/api/users/wallet`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -63,7 +63,7 @@ export function useNFTMint() {
 
   const checkMintStatus = async (userId: string): Promise<MintStatus | null> => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/residency/status/${userId}`);
+      const response = await fetch(`http://localhost:8000/api/residency/status/${userId}`);
       
       if (response.status === 404) {
         return { hasMinted: false };
@@ -88,7 +88,7 @@ export function useNFTMint() {
 
     setIsLoading(true);
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/residency/mint`, {
+      const response = await fetch(`http://localhost:8000/api/residency/mint`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

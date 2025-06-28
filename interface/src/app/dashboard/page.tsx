@@ -79,7 +79,7 @@ export default function Dashboard() {
   const fetchKycStatus = async (userId: string) => {
     try {
       setIsKycLoading(true);
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/kyc/status/${userId}`);
+              const response = await fetch(`http://localhost:8000/api/kyc/status/${userId}`);
       if (!response.ok) {
         throw new Error('Failed to fetch KYC status');
       }
@@ -104,7 +104,7 @@ export default function Dashboard() {
         }
 
         // Fetch user data
-        const userResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/me/${userId}`);
+        const userResponse = await fetch(`http://localhost:8000/api/auth/me/${userId}`);
         if (!userResponse.ok) {
           throw new Error('Failed to fetch user data');
         }
@@ -614,6 +614,84 @@ export default function Dashboard() {
                     </p>
                   </div>
 
+                  {/* Wallet Connection and NFT Minting */}
+                  <div className="bg-gray-50 rounded-lg p-6 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-lg font-medium text-gray-900">Wallet Connection</h3>
+                        <p className="text-sm text-gray-600">Connect your wallet to mint your NFT</p>
+                      </div>
+                      {isConnected ? (
+                        <div className="text-right">
+                          <p className="text-sm text-green-600 font-medium">
+                            Connected: {address?.slice(0, 6)}...{address?.slice(-4)}
+                          </p>
+                          <button
+                            onClick={() => disconnect()}
+                            className="text-xs text-red-600 hover:text-red-800 mt-1"
+                          >
+                            Disconnect
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={handleWalletConnect}
+                          className="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700 transition-colors"
+                        >
+                          Connect Wallet
+                        </button>
+                      )}
+                    </div>
+
+                    {isConnected && (
+                      <div className="border-t pt-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h4 className="text-md font-medium text-gray-900">Mint Your NFT</h4>
+                            <p className="text-sm text-gray-600">
+                              {mintStatus?.hasMinted 
+                                ? 'Your NFT has been minted!' 
+                                : kycData?.status === 'approved' 
+                                  ? 'Ready to mint your e-Residency NFT'
+                                  : 'Complete KYC verification first'
+                              }
+                            </p>
+                          </div>
+                          {!mintStatus?.hasMinted && (
+                            <button
+                              onClick={async () => {
+                                const userId = localStorage.getItem('userId');
+                                if (!userId) {
+                                  alert('User ID not found. Please refresh the page.');
+                                  return;
+                                }
+                                if (kycData?.status !== 'approved') {
+                                  alert('Please complete KYC verification first.');
+                                  return;
+                                }
+                                try {
+                                  const result = await mintNFT(userId);
+                                  alert(`NFT minted successfully! Token ID: ${result.tokenId}`);
+                                } catch (error) {
+                                  console.error('Minting failed:', error);
+                                  alert(`Minting failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                                }
+                              }}
+                              disabled={isMinting || kycData?.status !== 'approved'}
+                              className={`px-6 py-2 rounded-md text-sm font-medium transition-colors ${
+                                isMinting || kycData?.status !== 'approved'
+                                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                  : 'bg-blue-600 text-white hover:bg-blue-700'
+                              }`}
+                            >
+                              {isMinting ? 'Minting...' : 'Mint Your Residency NFT'}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
                   {/* NFT Display */}
                   <div className="border border-gray-200 rounded-lg p-4">
                     <div className="text-center mb-4">
@@ -660,11 +738,37 @@ export default function Dashboard() {
                       )}
                     </div>
 
-                    <div className="mt-4 pt-4 border-t">
-                      <button className="w-full bg-blue-600 text-white py-2 px-4 rounded-md text-sm font-medium hover:bg-blue-700 transition-colors">
-                        View on OpenSea
-                      </button>
-                    </div>
+                    {/* Only show OpenSea button for real networks, not localhost */}
+                    {mintStatus?.hasMinted && mintStatus?.transactionHash && !mintStatus?.contractAddress?.includes('0x5FbDB2315678afecb367f032d93F642f64180aa3') && (
+                      <div className="mt-4 pt-4 border-t">
+                        <button 
+                          onClick={() => {
+                            const contractAddress = mintStatus?.contractAddress || userData?.nftContract;
+                            const tokenId = mintStatus?.tokenId || userData?.nftTokenId;
+                            if (contractAddress && tokenId) {
+                              window.open(`https://opensea.io/assets/matic/${contractAddress}/${tokenId}`, '_blank');
+                            }
+                          }}
+                          className="w-full bg-blue-600 text-white py-2 px-4 rounded-md text-sm font-medium hover:bg-blue-700 transition-colors"
+                        >
+                          View on OpenSea
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Show local blockchain info for localhost */}
+                    {mintStatus?.hasMinted && mintStatus?.contractAddress?.includes('0x5FbDB2315678afecb367f032d93F642f64180aa3') && (
+                      <div className="mt-4 pt-4 border-t">
+                        <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
+                          <p className="text-xs text-yellow-800 font-medium">
+                            🧪 Development Mode
+                          </p>
+                          <p className="text-xs text-yellow-700 mt-1">
+                            This NFT is on your local Hardhat network. Deploy to a real network (Polygon, Ethereum) to view on OpenSea.
+                          </p>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* NFT Benefits */}
