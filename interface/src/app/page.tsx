@@ -19,10 +19,17 @@ export default function Home() {
     postalCode: '',
     addressCountry: '',
     // Selfie
-    selfieImage: null as string | null
+    selfieImage: null as string | null,
+    // Compliance questions
+    hasBeenConvicted: null as boolean | null,
+    hasBankruptcy: null as boolean | null,
+    isPoliticallyExposed: null as boolean | null,
+    hasRegulatorySanctions: null as boolean | null,
+    agreesToTerms: false
   })
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null)
   const [isCameraActive, setIsCameraActive] = useState(false)
+  const [isSubmitted, setIsSubmitted] = useState(false)
 
   const handleGetStarted = () => {
     setIsLoading(true)
@@ -39,10 +46,26 @@ export default function Home() {
     }))
   }
 
+  const handleBooleanChange = (field: string, value: boolean) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }))
+  }
+
   const handleContinue = () => {
     if (currentStep < 4) {
       setCurrentStep(currentStep + 1)
+    } else if (currentStep === 4) {
+      // Submit the form
+      handleSubmit()
     }
+  }
+
+  const handleSubmit = () => {
+    // Here you would normally send the data to your backend
+    console.log('Submitting application:', formData)
+    setIsSubmitted(true)
   }
 
   const handlePrevious = () => {
@@ -101,6 +124,17 @@ export default function Home() {
     { number: 4, title: 'Review & Submit', active: currentStep === 4, completed: false }
   ]
 
+  const handleStepClick = (stepNumber: number) => {
+    // Allow navigation to steps 1-3, but not step 4 (submit)
+    if (stepNumber < 4 && stepNumber !== currentStep) {
+      // Stop camera if leaving step 3
+      if (currentStep === 3 && cameraStream) {
+        stopCamera()
+      }
+      setCurrentStep(stepNumber)
+    }
+  }
+
   useEffect(() => {
     if (showApplication && currentStep === 3 && !formData.selfieImage && !isCameraActive) {
       startCamera()
@@ -155,7 +189,70 @@ export default function Home() {
 
       {/* Main Container - centered with bordered card */}
       <div className="min-h-screen flex items-center justify-center p-8 relative z-10">
-        {!showApplication ? (
+        {isSubmitted ? (
+          /* Success Screen */
+          <div className="bg-white rounded-2xl shadow-lg overflow-hidden w-full max-w-2xl p-8 text-center">
+            <div className="mb-6">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <h2 className="text-2xl font-semibold text-gray-900 mb-2">
+                Application Submitted Successfully!
+              </h2>
+              <p className="text-gray-600">
+                Thank you for your application to the Druk e-Portal. We will review your submission and contact you within 2-3 business days.
+              </p>
+            </div>
+            
+            <div className="bg-gray-50 rounded-lg p-4 mb-6 text-left">
+              <h3 className="text-sm font-medium text-gray-900 mb-2">Next Steps:</h3>
+              <ul className="text-sm text-gray-600 space-y-1">
+                <li>• Your application will be reviewed by our compliance team</li>
+                <li>• You will receive an email confirmation within 24 hours</li>
+                <li>• Final approval and digital ID issuance: 2-3 business days</li>
+                <li>• You can track your application status via email updates</li>
+              </ul>
+            </div>
+            
+            <div className="flex gap-3 justify-center">
+              <button
+                onClick={() => {
+                  setIsSubmitted(false)
+                  setShowApplication(false)
+                  setCurrentStep(1)
+                  setFormData({
+                    fullName: '',
+                    email: '',
+                    country: '',
+                    legalName: '',
+                    passportNumber: '',
+                    address: '',
+                    city: '',
+                    postalCode: '',
+                    addressCountry: '',
+                    selfieImage: null,
+                    hasBeenConvicted: null,
+                    hasBankruptcy: null,
+                    isPoliticallyExposed: null,
+                    hasRegulatorySanctions: null,
+                    agreesToTerms: false
+                  })
+                }}
+                className="bg-gray-900 text-white px-6 py-2 rounded-md font-medium text-sm hover:bg-gray-800 transition-colors"
+              >
+                Submit Another Application
+              </button>
+              <button
+                onClick={() => window.location.href = '/'}
+                className="border border-gray-300 text-gray-700 px-6 py-2 rounded-md font-medium text-sm hover:bg-gray-50 transition-colors"
+              >
+                Return to Home
+              </button>
+            </div>
+          </div>
+        ) : !showApplication ? (
           /* Landing Page with Image */
           <div className="bg-white rounded-2xl shadow-lg overflow-hidden flex w-full max-w-4xl h-auto">
             {/* Left side - Image */}
@@ -250,13 +347,18 @@ export default function Home() {
               <div className="flex items-center justify-between">
                 {steps.map((step, index) => (
                   <div key={step.number} className="flex items-center">
-                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${
-                      step.completed 
-                        ? 'bg-blue-600 text-white' 
-                        : step.active 
-                        ? 'bg-blue-600 text-white' 
-                        : 'bg-gray-200 text-gray-500'
-                    }`}>
+                    <div 
+                      onClick={() => handleStepClick(step.number)}
+                      className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium transition-colors ${
+                        step.completed 
+                          ? 'bg-blue-600 text-white cursor-pointer hover:bg-blue-700' 
+                          : step.active 
+                          ? 'bg-blue-600 text-white' 
+                          : step.number < 4 
+                          ? 'bg-gray-200 text-gray-500 cursor-pointer hover:bg-gray-300'
+                          : 'bg-gray-200 text-gray-500'
+                      }`}
+                    >
                       {step.completed ? '✓' : step.number}
                     </div>
                     {index < steps.length - 1 && (
@@ -523,10 +625,104 @@ export default function Home() {
 
               {currentStep === 4 && (
                 <div>
-                  <h2 className="text-lg font-medium text-gray-900 mb-4">
-                    Step 4: Review & Submit
-                  </h2>
-                  <p className="text-gray-600 text-sm">Review and submit form will go here...</p>
+                  {/* Compliance Questions */}
+                  <div className="space-y-4 mb-6">
+                    {/* Question 1 */}
+                    <div className="border border-gray-200 rounded-lg p-4">
+                      <p className="text-sm text-gray-900 mb-3">Have you ever been convicted of a criminal offense?</p>
+                      <div className="flex gap-4">
+                        <label className="flex items-center">
+                          <input
+                            type="radio"
+                            name="convicted"
+                            checked={formData.hasBeenConvicted === false}
+                            onChange={() => handleBooleanChange('hasBeenConvicted', false)}
+                            className="mr-2"
+                          />
+                          <span className="text-sm text-gray-700">No</span>
+                        </label>
+                        <label className="flex items-center">
+                          <input
+                            type="radio"
+                            name="convicted"
+                            checked={formData.hasBeenConvicted === true}
+                            onChange={() => handleBooleanChange('hasBeenConvicted', true)}
+                            className="mr-2"
+                          />
+                          <span className="text-sm text-gray-700">Yes</span>
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* Question 2 */}
+                    <div className="border border-gray-200 rounded-lg p-4">
+                      <p className="text-sm text-gray-900 mb-3">Have you ever filed for bankruptcy or been subject to insolvency proceedings?</p>
+                      <div className="flex gap-4">
+                        <label className="flex items-center">
+                          <input
+                            type="radio"
+                            name="bankruptcy"
+                            checked={formData.hasBankruptcy === false}
+                            onChange={() => handleBooleanChange('hasBankruptcy', false)}
+                            className="mr-2"
+                          />
+                          <span className="text-sm text-gray-700">No</span>
+                        </label>
+                        <label className="flex items-center">
+                          <input
+                            type="radio"
+                            name="bankruptcy"
+                            checked={formData.hasBankruptcy === true}
+                            onChange={() => handleBooleanChange('hasBankruptcy', true)}
+                            className="mr-2"
+                          />
+                          <span className="text-sm text-gray-700">Yes</span>
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* Question 3 */}
+                    <div className="border border-gray-200 rounded-lg p-4">
+                      <p className="text-sm text-gray-900 mb-3">Are you a politically exposed person (PEP) or related to one?</p>
+                      <div className="flex gap-4">
+                        <label className="flex items-center">
+                          <input
+                            type="radio"
+                            name="politically-exposed"
+                            checked={formData.isPoliticallyExposed === false}
+                            onChange={() => handleBooleanChange('isPoliticallyExposed', false)}
+                            className="mr-2"
+                          />
+                          <span className="text-sm text-gray-700">No</span>
+                        </label>
+                        <label className="flex items-center">
+                          <input
+                            type="radio"
+                            name="politically-exposed"
+                            checked={formData.isPoliticallyExposed === true}
+                            onChange={() => handleBooleanChange('isPoliticallyExposed', true)}
+                            className="mr-2"
+                          />
+                          <span className="text-sm text-gray-700">Yes</span>
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Terms Agreement */}
+                  <div className="border border-gray-200 rounded-lg p-4">
+                    <label className="flex items-start">
+                      <input
+                        type="checkbox"
+                        checked={formData.agreesToTerms}
+                        onChange={(e) => handleBooleanChange('agreesToTerms', e.target.checked)}
+                        className="mt-1 mr-3"
+                      />
+                      <span className="text-sm text-gray-700">
+                        I agree to the <a href="#" className="text-blue-600 hover:underline">Terms of Service</a> and <a href="#" className="text-blue-600 hover:underline">Privacy Policy</a>. I understand that providing false information may result in application rejection and legal consequences.
+                      </span>
+                    </label>
+                  </div>
                 </div>
               )}
             </div>
@@ -545,7 +741,13 @@ export default function Home() {
                 disabled={
                   (currentStep === 1 && (!formData.fullName || !formData.email || !formData.country)) ||
                   (currentStep === 2 && (!formData.legalName || !formData.passportNumber || !formData.address || !formData.city || !formData.postalCode || !formData.addressCountry)) ||
-                  (currentStep === 3 && !formData.selfieImage)
+                  (currentStep === 3 && !formData.selfieImage) ||
+                  (currentStep === 4 && (
+                    formData.hasBeenConvicted === null ||
+                    formData.hasBankruptcy === null ||
+                    formData.isPoliticallyExposed === null ||
+                    !formData.agreesToTerms
+                  ))
                 }
                 className="bg-gray-900 text-white px-4 py-2 rounded-md font-medium text-sm hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
               >
