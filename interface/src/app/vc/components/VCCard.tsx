@@ -16,6 +16,7 @@ type VerifiableCredential = {
     residencyStatus: string;
     passportNumber?: string;
     kycVerified: boolean;
+    zkReady?: boolean;
   };
   proof: {
     type: string;
@@ -98,6 +99,11 @@ export default function VCCard({ vc, metadata }: VCCardProps) {
               {vc.credentialSubject.kycVerified && (
                 <span className="bg-green-500/80 rounded-full px-2 py-1 text-xs">
                   ✓ KYC VERIFIED
+                </span>
+              )}
+              {vc.credentialSubject.zkReady && (
+                <span className="bg-blue-500/80 rounded-full px-2 py-1 text-xs">
+                  🛡️ ZK-Ready
                 </span>
               )}
             </div>
@@ -187,6 +193,58 @@ export default function VCCard({ vc, metadata }: VCCardProps) {
           </div>
         </div>
       )}
+
+      {/* ZK Privacy Features */}
+      <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-xl p-6">
+        <div className="flex items-start gap-4">
+          <div className="flex-shrink-0">
+            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+              <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+            </div>
+          </div>
+          <div className="flex-1">
+            <h3 className="text-lg font-semibold text-gray-900 mb-3">Zero-Knowledge Privacy</h3>
+            
+            <div className="space-y-3 mb-4">
+              <div className="flex items-center gap-3">
+                <input type="checkbox" disabled checked className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500" />
+                <label className="text-sm text-gray-700">
+                  Field-level privacy enabled (ZK-ready)
+                </label>
+                <span className="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full font-medium">
+                  🛡️ ZK-Proof Ready
+                </span>
+              </div>
+              
+              <div className="flex items-center gap-3">
+                <input type="checkbox" disabled checked className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500" />
+                <label className="text-sm text-gray-700">
+                  Selective disclosure supported
+                </label>
+              </div>
+              
+              <div className="flex items-center gap-3">
+                <input type="checkbox" disabled className="w-4 h-4 text-gray-400 bg-gray-100 border-gray-300 rounded" />
+                <label className="text-sm text-gray-500">
+                  Advanced ZK circuits (coming soon)
+                </label>
+              </div>
+            </div>
+            
+            <div className="bg-white/60 border border-blue-200 rounded-lg p-3">
+              <p className="text-xs text-gray-600 mb-2">
+                <strong>Privacy-First Sharing:</strong> This credential supports selective disclosure. 
+                Share only what's needed — prove you're a Bhutan e-resident without revealing personal details.
+              </p>
+              <p className="text-xs text-blue-600 font-medium">
+                Zero-knowledge proofs ensure mathematical privacy guarantees.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Credential Details */}
       <div className="bg-white rounded-lg border shadow-sm p-6">
