@@ -21,13 +21,7 @@ const initRoutes = (app) => {
         });
     });
 
-    // 404 handler
-    app.use("*", (req, res) => {
-        res.status(404).json({
-            status: 404,
-            message: `Cannot ${req.method} ${req.originalUrl}`
-        });
-    });
+
 };
 
 export default initRoutes;

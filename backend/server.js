@@ -3,6 +3,7 @@ import connectDB from './config/db.js';
 import cors from "cors"
 import compression from "compression"
 import { environment } from './config/environment.js';
+import initRoutes from './routes/index.js';
 
 
 const app = express()
@@ -14,6 +15,7 @@ app.use(
         extended: true
     })
 )
+initRoutes(app)
 // Health check route
 app.get('/health', (req, res) => {
   res.status(200).json({ message: 'Server is healthy' });
