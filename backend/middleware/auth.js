@@ -1,8 +1,8 @@
-const jwt = require('jsonwebtoken');
-const User = require('../models/User');
+import jwt from 'jsonwebtoken';
+import User from '../models/User.js';
 
 // Protect routes
-exports.protect = async (req, res, next) => {
+export const protect = async (req, res, next) => {
   let token;
 
   // Get token from header or cookie
@@ -27,7 +27,7 @@ exports.protect = async (req, res, next) => {
 
   try {
     // Verify token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your_jwt_secret');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     // Get user from the token
     req.user = await User.findById(decoded.id).select('-password');
@@ -59,7 +59,7 @@ exports.protect = async (req, res, next) => {
 };
 
 // Grant access to specific roles
-exports.authorize = (...roles) => {
+export const authorize = (...roles) => {
   return (req, res, next) => {
     if (!roles.includes(req.user.role)) {
       return res.status(403).json({ 
@@ -73,22 +73,24 @@ exports.authorize = (...roles) => {
 
 // Generate JWT token
 const signToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET || 'your_jwt_secret', {
-    expiresIn: process.env.JWT_EXPIRE || '30d',
-  });
+  return jwt.sign(
+    { id },
+    process.env.JWT_SECRET || 'your_jwt_secret',
+    { expiresIn: process.env.JWT_EXPIRE || '30d' }
+  );
 };
 
 // Send JWT token in response
 const sendTokenResponse = (user, statusCode, res) => {
   // Create token
   const token = signToken(user._id);
+  const cookieExpireDays = parseInt(process.env.JWT_COOKIE_EXPIRE) || 30;
 
   const options = {
-    expires: new Date(
-      Date.now() + (process.env.JWT_COOKIE_EXPIRE || 30) * 24 * 60 * 60 * 1000
-    ),
+    expires: new Date(Date.now() + cookieExpireDays * 24 * 60 * 60 * 1000),
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
   };
 
   // Remove password from output
@@ -102,7 +104,7 @@ const sendTokenResponse = (user, statusCode, res) => {
 };
 
 // Login user
-exports.login = async (req, res, next) => {
+export const login = async (req, res, next) => {
   const { email, password } = req.body;
 
   // Validate email & password
@@ -121,6 +123,14 @@ exports.login = async (req, res, next) => {
       return res.status(401).json({ 
         success: false, 
         message: 'Invalid credentials' 
+      });
+    }
+    
+    // Check if user is active
+    if (user.status !== 'active') {
+      return res.status(401).json({
+        success: false,
+        message: 'Your account has been deactivated. Please contact support.'
       });
     }
 
@@ -149,7 +159,7 @@ exports.login = async (req, res, next) => {
 };
 
 // Register user
-exports.register = async (req, res, next) => {
+export const register = async (req, res, next) => {
   try {
     const { fullName, email, password, passportNumber, country, residencyType } = req.body;
 
@@ -185,7 +195,7 @@ exports.register = async (req, res, next) => {
 };
 
 // Get current logged in user
-exports.getMe = async (req, res, next) => {
+export const getMe = async (req, res, next) => {
   try {
     const user = await User.findById(req.user.id);
     
@@ -203,7 +213,7 @@ exports.getMe = async (req, res, next) => {
 };
 
 // Logout user / clear cookie
-exports.logout = (req, res, next) => {
+export const logout = (req, res, next) => {
   res.cookie('token', 'none', {
     expires: new Date(Date.now() + 10 * 1000),
     httpOnly: true,

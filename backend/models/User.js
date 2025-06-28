@@ -1,5 +1,5 @@
-const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
+import mongoose from 'mongoose';
+import bcrypt from 'bcryptjs';
 
 const userSchema = new mongoose.Schema({
   fullName: { type: String, required: true },
@@ -31,14 +31,30 @@ const userSchema = new mongoose.Schema({
     type: Boolean, 
     default: false 
   },
+  emailVerified: {
+    type: Boolean,
+    default: false
+  },
+  phoneNumber: {
+    type: String,
+    trim: true
+  },
+  phoneVerified: {
+    type: Boolean,
+    default: false
+  },
   verificationToken: String,
   resetToken: String,
   resetTokenExpiry: Date,
   role: {
     type: String,
-    enum: ['user', 'admin'],
+    enum: ['user', 'admin', 'moderator'],
     default: 'user'
   },
+  permissions: [{
+    type: String,
+    enum: ['read', 'write', 'delete', 'manage_users', 'manage_content'],
+  }],
   lastLogin: Date,
   status: {
     type: String,
@@ -58,12 +74,26 @@ userSchema.pre('save', async function(next) {
     this.password = await bcrypt.hash(this.password, salt);
     next();
   } catch (error) {
+    console.error('Error hashing password:', error);
     next(error);
   }
 });
 
+// Update timestamps on save
+userSchema.pre('save', function(next) {
+  const now = new Date();
+  this.updatedAt = now;
+  if (!this.createdAt) {
+    this.createdAt = now;
+  }
+  next();
+});
+
 // Method to compare password
 userSchema.methods.comparePassword = async function(candidatePassword) {
+  if (!candidatePassword || !this.password) {
+    return false;
+  }
   return await bcrypt.compare(candidatePassword, this.password);
 };
 
@@ -79,4 +109,4 @@ userSchema.methods.getPublicProfile = function() {
 
 const User = mongoose.model('User', userSchema);
 
-module.exports = User;
+export default User;

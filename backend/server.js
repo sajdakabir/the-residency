@@ -1,14 +1,19 @@
-require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
-const mongoose = require('mongoose');
-const path = require('path');
+import 'dotenv/config';
+import express from 'express';
+import cors from 'cors';
+import mongoose from 'mongoose';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+// ES modules equivalent of __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Import routes
-const authRoutes = require('./routes/auth');
-const userRoutes = require('./routes/users');
-const applicationRoutes = require('./routes/applications');
-const documentRoutes = require('./routes/documents');
+import authRoutes from './routes/auth.js';
+import userRoutes from './routes/users.js';
+import applicationRoutes from './routes/applications.js';
+import documentRoutes from './routes/documents.js';
 
 const app = express();
 
@@ -34,14 +39,15 @@ app.use('/api/documents', documentRoutes);
 // Serve static assets in production
 if (process.env.NODE_ENV === 'production') {
   // Set static folder
-  app.use(express.static(path.join(__dirname, '../frontend/build')));
+  const frontendPath = path.join(path.dirname(__dirname), 'frontend', 'build');
+  app.use(express.static(frontendPath));
   
   app.get('*', (req, res) => {
-    res.sendFile(path.resolve(__dirname, '../frontend/build', 'index.html'));
+    res.sendFile(path.join(frontendPath, 'index.html'));
   });
 }
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 8000;
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

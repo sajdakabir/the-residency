@@ -10,6 +10,10 @@
 !.yarn/releases
 !.yarn/versions
 
+frontend/node_modules
+frontend/.next
+frontend/.yarn
+
 backend/node_modules
 backend/.next
 backend/.yarn

@@ -1,4 +1,5 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
+import { v4 as uuidv4 } from 'uuid';
 
 const documentSchema = new mongoose.Schema({
   name: { type: String, required: true },
@@ -21,8 +22,18 @@ const applicationSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['draft', 'submitted', 'in_review', 'approved', 'rejected', 'completed'],
+    enum: ['draft', 'submitted', 'in_review', 'additional_info_required', 'approved', 'rejected', 'completed', 'cancelled'],
     default: 'draft',
+  },
+  priority: {
+    type: String,
+    enum: ['low', 'normal', 'high', 'urgent'],
+    default: 'normal'
+  },
+  referenceNumber: {
+    type: String,
+    unique: true,
+    sparse: true
   },
   // General application data
   data: { 
@@ -86,19 +97,102 @@ applicationSchema.index(
   }
 );
 
-// Pre-save hook to handle status changes
+// Pre-save hook to handle status changes and reference number automatically
 applicationSchema.pre('save', function(next) {
-  if (this.isModified('status') && this.status === 'submitted' && !this.submittedAt) {
-    this.submittedAt = new Date();
+  // Generate reference number if not exists
+  if (!this.referenceNumber && this.status === 'submitted') {
+    const date = new Date();
+    const year = date.getFullYear().toString().slice(-2);
+    const random = Math.floor(1000 + Math.random() * 9000);
+    this.referenceNumber = `APP-${year}${(date.getMonth() + 1).toString().padStart(2, '0')}-${random}`;
   }
-  
-  if (this.isModified('status') && ['approved', 'rejected', 'completed'].includes(this.status)) {
-    this.completedAt = new Date();
+
+  // Set submittedAt when status changes to submitted
+  if (this.isModified('status')) {
+    if (this.status === 'submitted' && !this.submittedAt) {
+      this.submittedAt = new Date();
+    }
+    
+    // Set completedAt for terminal states
+    if (['approved', 'rejected', 'completed', 'cancelled'].includes(this.status)) {
+      this.completedAt = new Date();
+    }
+    
+    // Set inReviewAt when status changes to in_review
+    if (this.status === 'in_review' && !this.inReviewAt) {
+      this.inReviewAt = new Date();
+    }
   }
   
   next();
 });
 
+// Add virtual for formatted application number
+applicationSchema.virtual('applicationNumber').get(function() {
+  const date = this.createdAt || new Date();
+  const year = date.getFullYear().toString().slice(-2);
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const id = this._id.toString().slice(-6).toUpperCase();
+  return `APP-${year}${month}-${id}`;
+});
+
+// Add method to get public view of application
+applicationSchema.methods.toPublicJSON = function() {
+  const obj = this.toObject();
+  
+  // Remove sensitive fields
+  delete obj.__v;
+  delete obj.user?.password;
+  delete obj.user?.resetToken;
+  delete obj.user?.verificationToken;
+  
+  return obj;
+};
+
+// Add static method for pagination
+applicationSchema.statics.paginate = async function(query, options) {
+  const { page = 1, limit = 10, sort = { createdAt: -1 } } = options;
+  const skip = (page - 1) * limit;
+  
+  const [items, total] = await Promise.all([
+    this.find(query)
+      .sort(sort)
+      .skip(skip)
+      .limit(limit)
+      .populate('user', 'fullName email')
+      .populate('reviewedBy', 'fullName email'),
+    this.countDocuments(query)
+  ]);
+  
+  return {
+    items,
+    total,
+    page,
+    totalPages: Math.ceil(total / limit),
+    hasNextPage: page * limit < total,
+    hasPreviousPage: page > 1
+  };
+};
+
+// Add text search method
+applicationSchema.statics.search = function(query) {
+  return this.find(
+    { $text: { $search: query } },
+    { score: { $meta: 'textScore' } }
+  ).sort({ score: { $meta: 'textScore' } });
+};
+
+// Add pre-remove hook to clean up related documents
+applicationSchema.pre('remove', async function(next) {
+  // Implement any cleanup logic here
+  // For example, remove related documents or update references
+  next();
+});
+
+// Enable virtuals for toJSON and toObject
+applicationSchema.set('toJSON', { virtuals: true });
+applicationSchema.set('toObject', { virtuals: true });
+
 const Application = mongoose.model('Application', applicationSchema);
 
-module.exports = Application;
+export default Application;
