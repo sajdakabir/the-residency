@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import VCCard from './components/VCCard';
 import VCViewer from './components/VCViewer';
 import VCActions from './components/VCActions';
+import VCVerifier from './components/VCVerifier';
 
 type VerifiableCredential = {
   '@context': string[];
@@ -20,6 +21,7 @@ type VerifiableCredential = {
     residencyStatus: string;
     passportNumber?: string;
     kycVerified: boolean;
+    zkReady?: boolean;
   };
   proof: {
     type: string;
@@ -51,7 +53,7 @@ export default function VCWalletPage() {
   const [vcData, setVcData] = useState<VCData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState<'card' | 'json'>('card');
+  const [activeTab, setActiveTab] = useState<'card' | 'json' | 'verify'>('card');
   const router = useRouter();
 
   useEffect(() => {
@@ -183,6 +185,16 @@ export default function VCWalletPage() {
             >
               Raw Credential
             </button>
+            <button
+              onClick={() => setActiveTab('verify')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'verify'
+                  ? 'border-green-500 text-green-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              🛡️ Verifier
+            </button>
           </nav>
         </div>
 
@@ -199,6 +211,10 @@ export default function VCWalletPage() {
             <VCViewer vc={vcData.vc} />
             <VCActions vc={vcData.vc} metadata={vcData.metadata} />
           </div>
+        )}
+
+        {activeTab === 'verify' && (
+          <VCVerifier userVC={vcData.vc} userVCId={vcData.metadata.vcId} />
         )}
 
         {/* Security Notice */}
