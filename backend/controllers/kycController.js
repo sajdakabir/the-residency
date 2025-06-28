@@ -6,13 +6,14 @@ import Kyc from '../models/Kyc.js';
 // @access  Public (or Protected if needed)
 export const submitKyc = asyncHandler(async (req, res) => {
   const { fullName, email, address } = req.body;
-  // For now assume frontend uploads files elsewhere and passes URLs; extend with multer later
-  const { passportUrl, selfieUrl } = req.body;
+
+  const { passportNumber } = req.body;
+  const selfieUrl = req.files?.selfie?.[0]?.path;
 
   const kyc = await Kyc.create({
     fullName,
     email,
-    passportUrl,
+    passportNumber,
     selfieUrl,
     address,
   });
