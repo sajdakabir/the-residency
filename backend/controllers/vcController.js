@@ -53,7 +53,8 @@ export const generateVC = asyncHandler(async (req, res) => {
         country: vcData.credentialSubject.country,
         residencyStatus: vcData.credentialSubject.residencyStatus,
         passportNumber: vcData.credentialSubject.passportNumber,
-        kycVerified: vcData.credentialSubject.kycVerified
+        kycVerified: vcData.credentialSubject.kycVerified,
+        zkReady: vcData.credentialSubject.zkReady
       },
       proof: vcData.proof,
       user: userId,
