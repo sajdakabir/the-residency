@@ -19,11 +19,28 @@ const residencySchema = new mongoose.Schema({
   transactionHash: {
     type: String,
   },
+  blockNumber: {
+    type: Number,
+  },
+  blockHash: {
+    type: String,
+  },
+  syncedFromBlockchain: {
+    type: Boolean,
+    default: false
+  },
   metadata: {
     name: String,
     citizenshipCountry: String,
     eResidencyId: String,
-    timestamp: String
+    timestamp: String,
+    description: String,
+    image: String,
+    attributes: [{
+      trait_type: String,
+      value: mongoose.Schema.Types.Mixed,
+      display_type: String
+    }]
   }
 }, { timestamps: true });
 

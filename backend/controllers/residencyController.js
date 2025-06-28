@@ -55,8 +55,106 @@ const contractABI = [
   'function tokenURI(uint256 tokenId) view returns (string memory)',
   
   // Custom Functions
-  'function mintNFT(address to, string memory name, string memory citizenshipCountry, string memory eResidencyId, string memory tokenUri) external returns (uint256)'
+  'function mintNFT(address to, string memory name, string memory citizenshipCountry, string memory eResidencyId, string memory tokenUri) external returns (uint256)',
+  'function tokenOfOwner(address owner) view returns (uint256)',
+  'function getResidencyData(uint256 tokenId) view returns (string memory name, string memory citizenshipCountry, string memory eResidencyId, uint256 timestamp)'
 ];
+
+// Helper function to check if address has NFT on blockchain
+const checkNFTOnBlockchain = async (walletAddress) => {
+  try {
+    const contract = new ethers.Contract(CONTRACT_ADDRESS, contractABI, provider);
+    const tokenId = await contract.tokenOfOwner(walletAddress);
+    return { hasNFT: true, tokenId: tokenId.toString() };
+  } catch (error) {
+    // If error contains "Owner has no tokens", then no NFT exists
+    if (error.message.includes('Owner has no tokens')) {
+      return { hasNFT: false, tokenId: null };
+    }
+    throw error;
+  }
+};
+
+// Helper function to fetch NFT data from blockchain
+const fetchNFTDataFromBlockchain = async (tokenId, walletAddress) => {
+  try {
+    const contract = new ethers.Contract(CONTRACT_ADDRESS, contractABI, provider);
+    
+    // Get residency data from contract
+    const [name, citizenshipCountry, eResidencyId, timestamp] = await contract.getResidencyData(tokenId);
+    
+    // Get token URI
+    const tokenUri = await contract.tokenURI(tokenId);
+    
+    return {
+      tokenId: tokenId.toString(),
+      name,
+      citizenshipCountry,
+      eResidencyId,
+      timestamp: timestamp.toString(),
+      tokenUri,
+      walletAddress: walletAddress.toLowerCase()
+    };
+  } catch (error) {
+    console.error('Error fetching NFT data from blockchain:', error);
+    throw error;
+  }
+};
+
+// Function to save blockchain NFT data to database
+const saveBlockchainNFTToDatabase = async (userId, nftData, session) => {
+  try {
+    // Create metadata object
+    const metadata = {
+      name: nftData.name,
+      citizenshipCountry: nftData.citizenshipCountry,
+      eResidencyId: nftData.eResidencyId,
+      timestamp: new Date(parseInt(nftData.timestamp) * 1000).toISOString(),
+      description: `e-Residency NFT for ${nftData.name}`,
+      image: `${METADATA_BASE_URI}/images/${nftData.eResidencyId}.png`,
+      attributes: [
+        {
+          trait_type: 'Citizenship',
+          value: nftData.citizenshipCountry
+        },
+        {
+          display_type: 'date',
+          trait_type: 'Issued On',
+          value: parseInt(nftData.timestamp)
+        }
+      ]
+    };
+
+    // Save to Residency collection
+    const newResidency = new Residency({
+      user: userId,
+      walletAddress: nftData.walletAddress,
+      tokenId: nftData.tokenId,
+      contractAddress: CONTRACT_ADDRESS,
+      transactionHash: '', // We don't have the original transaction hash
+      metadata,
+      blockNumber: 0, // We don't have the original block number
+      blockHash: '', // We don't have the original block hash
+      syncedFromBlockchain: true // Flag to indicate this was synced from blockchain
+    });
+    
+    await newResidency.save({ session });
+
+    // Update user with residency data
+    const user = await User.findById(userId).session(session);
+    if (user) {
+      user.residencyId = nftData.eResidencyId;
+      user.walletAddress = nftData.walletAddress;
+      user.nftTokenId = nftData.tokenId;
+      await user.save({ session });
+    }
+
+    return newResidency;
+  } catch (error) {
+    console.error('Error saving blockchain NFT to database:', error);
+    throw error;
+  }
+};
 
 export const checkMintStatus = async (req, res) => {
   try {
@@ -260,8 +358,45 @@ export const mintResidencyNFT = async (req, res) => {
       });
       
     } catch (blockchainError) {
-      await session.abortTransaction();
       console.error('Blockchain transaction failed:', blockchainError);
+      
+      // Check if error is because address already has an NFT
+      if (blockchainError.message.includes('Address already has an eResidency NFT')) {
+        console.log(`Wallet ${walletAddress} already has an NFT. Attempting to sync from blockchain...`);
+        
+        try {
+          // Check if the NFT exists on blockchain
+          const blockchainCheck = await checkNFTOnBlockchain(walletAddress);
+          
+          if (blockchainCheck.hasNFT) {
+            // Fetch NFT data from blockchain
+            const nftData = await fetchNFTDataFromBlockchain(blockchainCheck.tokenId, walletAddress);
+            
+            // Save to database
+            const savedResidency = await saveBlockchainNFTToDatabase(userId, nftData, session);
+            
+            // Commit the transaction
+            await session.commitTransaction();
+            
+            // Return success response with synced data
+            return res.json({
+              success: true,
+              message: 'NFT data synced from blockchain',
+              synced: true,
+              tokenId: nftData.tokenId,
+              eResidencyId: nftData.eResidencyId,
+              contractAddress: CONTRACT_ADDRESS,
+              syncedAt: new Date().toISOString()
+            });
+          }
+        } catch (syncError) {
+          console.error('Error syncing NFT from blockchain:', syncError);
+          await session.abortTransaction();
+          throw new Error(`Failed to sync existing NFT: ${syncError.message}`);
+        }
+      }
+      
+      await session.abortTransaction();
       throw new Error(`Blockchain transaction failed: ${blockchainError.message}`);
     }
     
@@ -293,6 +428,129 @@ export const mintResidencyNFT = async (req, res) => {
     res.status(500).json({ 
       error: 'Failed to mint NFT',
       code: 'MINT_ERROR',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  } finally {
+    await session.endSession();
+  }
+};
+
+/**
+ * @swagger
+ * /api/residency/sync:
+ *   post:
+ *     summary: Sync existing NFT from blockchain to database
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - userId
+ *               - walletAddress
+ *             properties:
+ *               userId:
+ *                 type: string
+ *                 description: The ID of the user
+ *               walletAddress:
+ *                 type: string
+ *                 description: The Ethereum address to sync NFT for
+ *     responses:
+ *       200:
+ *         description: NFT synced successfully
+ *       400:
+ *         description: Invalid request or no NFT found
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Server error
+ */
+export const syncNFTFromBlockchain = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  
+  try {
+    const { userId, walletAddress } = req.body;
+    
+    // Input validation
+    if (!userId || !walletAddress) {
+      await session.abortTransaction();
+      return res.status(400).json({ 
+        error: 'Missing required fields: userId and walletAddress are required' 
+      });
+    }
+    
+    // Validate Ethereum address
+    if (!ethers.isAddress(walletAddress)) {
+      await session.abortTransaction();
+      return res.status(400).json({ 
+        error: 'Invalid wallet address' 
+      });
+    }
+    
+    // Verify user exists
+    const user = await User.findById(userId).session(session);
+    if (!user) {
+      await session.abortTransaction();
+      return res.status(404).json({ 
+        error: 'User not found' 
+      });
+    }
+    
+    // Check if already exists in database
+    const existingResidency = await Residency.findOne({ user: userId }).session(session);
+    if (existingResidency) {
+      await session.abortTransaction();
+      return res.status(400).json({ 
+        error: 'NFT data already exists in database',
+        tokenId: existingResidency.tokenId,
+        eResidencyId: existingResidency.metadata?.eResidencyId
+      });
+    }
+    
+    // Check if the NFT exists on blockchain
+    const blockchainCheck = await checkNFTOnBlockchain(walletAddress);
+    
+    if (!blockchainCheck.hasNFT) {
+      await session.abortTransaction();
+      return res.status(400).json({ 
+        error: 'No NFT found for this wallet address on blockchain' 
+      });
+    }
+    
+    // Fetch NFT data from blockchain
+    const nftData = await fetchNFTDataFromBlockchain(blockchainCheck.tokenId, walletAddress);
+    
+    // Save to database
+    const savedResidency = await saveBlockchainNFTToDatabase(userId, nftData, session);
+    
+    // Commit the transaction
+    await session.commitTransaction();
+    
+    // Return success response
+    res.json({
+      success: true,
+      message: 'NFT data synced successfully from blockchain',
+      tokenId: nftData.tokenId,
+      eResidencyId: nftData.eResidencyId,
+      contractAddress: CONTRACT_ADDRESS,
+      syncedAt: new Date().toISOString(),
+      data: savedResidency
+    });
+    
+  } catch (error) {
+    try {
+      await session.abortTransaction();
+    } catch (abortError) {
+      console.error('Error aborting transaction:', abortError);
+    }
+    
+    console.error('Error in syncNFTFromBlockchain:', error);
+    
+    res.status(500).json({ 
+      error: 'Failed to sync NFT from blockchain',
+      code: 'SYNC_ERROR',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   } finally {

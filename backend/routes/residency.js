@@ -1,5 +1,5 @@
 import express from 'express';
-import { checkMintStatus, mintResidencyNFT } from '../controllers/residencyController.js';
+import { checkMintStatus, mintResidencyNFT, syncNFTFromBlockchain } from '../controllers/residencyController.js';
 
 const router = express.Router();
 
@@ -9,5 +9,7 @@ router.get('/status/:userId', checkMintStatus);
 // Mint new residency NFT
 router.post('/mint', mintResidencyNFT);
 
+// Sync existing NFT from blockchain
+router.post('/sync', syncNFTFromBlockchain);
 
 export default router;

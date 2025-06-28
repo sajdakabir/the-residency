@@ -19,6 +19,9 @@ interface MintResult {
   eResidencyId?: string;
   contractAddress?: string;
   error?: string;
+  synced?: boolean;
+  message?: string;
+  syncedAt?: string;
 }
 
 export function useNFTMint() {
@@ -105,7 +108,7 @@ export function useNFTMint() {
         throw new Error(data.error || 'Failed to mint NFT');
       }
 
-      // Update mint status after successful mint
+      // Update mint status after successful mint or sync
       const newMintStatus = await checkMintStatus(userId);
       if (newMintStatus) {
         setMintStatus(newMintStatus);
@@ -120,6 +123,45 @@ export function useNFTMint() {
     }
   };
 
+  const syncNFT = async (userId: string): Promise<MintResult> => {
+    if (!isConnected || !address) {
+      throw new Error('Wallet not connected');
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await fetch(`http://localhost:8000/api/residency/sync`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId,
+          walletAddress: address,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to sync NFT');
+      }
+
+      // Update mint status after successful sync
+      const newMintStatus = await checkMintStatus(userId);
+      if (newMintStatus) {
+        setMintStatus(newMintStatus);
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error syncing NFT:', error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return {
     // Wallet connection
     address,
@@ -128,8 +170,9 @@ export function useNFTMint() {
     disconnect,
     saveWalletAddress,
     
-    // NFT minting
+    // NFT minting and syncing
     mintNFT,
+    syncNFT,
     checkMintStatus,
     isLoading,
     mintStatus,
