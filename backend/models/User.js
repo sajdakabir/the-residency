@@ -19,7 +19,7 @@ const userSchema = new mongoose.Schema({
   passportNumber: { 
     type: String, 
     // required: true, 
-    unique: true 
+
   },
   residencyType: { 
     type: String, 
