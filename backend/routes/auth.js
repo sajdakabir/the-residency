@@ -14,7 +14,7 @@ router.post('/register', register);
 router.post('/login', login);
 router.get('/logout', logout);
 
-// Protected routes (require authentication)
-router.get('/me', protect, getMe);
+// Get user by ID
+router.get('/me/:userId', getMe);
 
 export default router;

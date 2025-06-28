@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
+import Kyc from '../models/Kyc.js';
 import { environment } from '../config/environment.js';
 
 // Protect routes
@@ -192,14 +193,43 @@ export const register = async (req, res, next) => {
   }
 };
 
-// Get current logged in user
+// Get user by ID with KYC data
 export const getMe = async (req, res, next) => {
   try {
-    const user = await User.findById(req.user.id);
+    const { userId } = req.params;
     
+    // Find user and populate KYC data
+    const user = await User.findById(userId).select('-password');
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Find KYC data for this user
+    const kyc = await Kyc.findOne({ user: userId });
+
+    // Format response
+    const userData = {
+      id: user._id,
+      fullName: user.fullName,
+      email: user.email,
+      passportNumber: user.passportNumber,
+      kyc: kyc ? {
+        status: kyc.status,
+        submittedAt: kyc.createdAt,
+        selfieUrl: kyc.selfieUrl,
+        address: kyc.address,
+        country: kyc.country
+      } : null,
+      hasKyc: !!kyc,
+      kycStatus: kyc?.status || 'not_submitted'
+    };
+
     res.status(200).json({
       success: true,
-      data: user
+      data: userData
     });
   } catch (err) {
     console.error('Get me error:', err);

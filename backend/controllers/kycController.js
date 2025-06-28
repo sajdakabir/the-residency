@@ -22,6 +22,7 @@ export const submitKyc = asyncHandler(async (req, res) => {
       passportNumber,  // Include passportNumber for new users
       status: 'active'
     });
+    
   } else if (passportNumber) {
     // Update existing user's passport number if provided
     user.passportNumber = passportNumber;
