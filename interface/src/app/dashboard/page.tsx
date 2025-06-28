@@ -3,20 +3,26 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
+type KycStatus = 'not_submitted' | 'pending' | 'approved' | 'rejected' | 'in_review';
+
+type KycData = {
+  hasKyc: boolean;
+  status: KycStatus;
+  submittedAt?: string;
+  reviewedAt?: string | null;
+  comments?: string | null;
+  user?: {
+    fullName: string;
+    email: string;
+  } | null;
+};
+
 type UserData = {
   id: string;
   fullName: string;
   email: string;
   passportNumber?: string;
-  kyc?: {
-    status: string;
-    submittedAt: string;
-    selfieUrl?: string;
-    address?: string;
-    country?: string;
-  } | null;
-  hasKyc: boolean;
-  kycStatus: string;
+  kycStatus: KycStatus;
   nftTokenId?: string;
   nftContract?: string;
   applicationDate?: string;
@@ -27,9 +33,29 @@ type UserData = {
 export default function Dashboard() {
   const [activeSection, setActiveSection] = useState('overview');
   const [userData, setUserData] = useState<UserData | null>(null);
+  const [kycData, setKycData] = useState<KycData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isKycLoading, setIsKycLoading] = useState(false);
   const [error, setError] = useState('');
   const router = useRouter();
+
+  const fetchKycStatus = async (userId: string) => {
+    try {
+      setIsKycLoading(true);
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/kyc/status/${userId}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch KYC status');
+      }
+      const data = await response.json();
+      if (data.success && data.data) {
+        setKycData(data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching KYC status:', error);
+    } finally {
+      setIsKycLoading(false);
+    }
+  };
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -40,17 +66,20 @@ export default function Dashboard() {
           return;
         }
 
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/me/${userId}`);
-        if (!response.ok) {
+        // Fetch user data
+        const userResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/me/${userId}`);
+        if (!userResponse.ok) {
           throw new Error('Failed to fetch user data');
         }
+        const userData = await userResponse.json();
+        setUserData(userData.data);
 
-        const data = await response.json();
-        setUserData(data.data);
+        // Fetch KYC status
+        await fetchKycStatus(userId);
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'An error occurred';
         setError(errorMessage);
-        console.error('Error fetching user data:', error);
+        console.error('Error:', error);
       } finally {
         setIsLoading(false);
       }
@@ -77,13 +106,29 @@ export default function Dashboard() {
 
   const menuItems = [
     { id: 'overview', label: 'Overview', icon: 'home' },
-    { id: 'kyc', label: 'KYC Status', icon: 'check' },
+    { id: 'kyc', label: 'KYC Status', icon: 'check', count: kycData?.status === 'pending' ? '!' : undefined },
     { id: 'nft', label: 'Residency NFT', icon: 'badge' },
     { id: 'company', label: 'Company Info', icon: 'building' },
     { id: 'documents', label: 'Documents', icon: 'document' }
-  ]
+  ] as const;
 
-  const renderIcon = (iconType: string) => {
+  const getStatusBadge = (status: KycStatus) => {
+    const statusConfig = {
+      not_submitted: { label: 'Not Submitted', color: 'bg-gray-100 text-gray-800' },
+      pending: { label: 'Pending Review', color: 'bg-yellow-100 text-yellow-800' },
+      approved: { label: 'Approved', color: 'bg-green-100 text-green-800' },
+      rejected: { label: 'Rejected', color: 'bg-red-100 text-red-800' },
+      in_review: { label: 'In Review', color: 'bg-blue-100 text-blue-800' },
+    };
+    const config = statusConfig[status] || statusConfig.not_submitted;
+    return (
+      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${config.color}`}>
+        {config.label}
+      </span>
+    );
+  };
+
+  const renderIcon = (iconType: string, count?: string) => {
     const iconProps = "w-4 h-4 text-current"
     
     switch(iconType) {
@@ -95,9 +140,16 @@ export default function Dashboard() {
         )
       case 'check':
         return (
-          <svg className={iconProps} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
+          <div className="relative">
+            <svg className={iconProps} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            {count && (
+              <span className="absolute -top-2 -right-2 h-4 w-4 flex items-center justify-center rounded-full bg-red-500 text-white text-xs">
+                {count}
+              </span>
+            )}
+          </div>
         )
       case 'badge':
         return (
@@ -121,6 +173,215 @@ export default function Dashboard() {
         return null
     }
   }
+
+  const renderKycStatus = () => {
+    if (isKycLoading) {
+      return (
+        <div className="p-4 bg-white rounded-lg shadow">
+          <div className="animate-pulse space-y-4">
+            <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+            <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+          </div>
+        </div>
+      );
+    }
+
+    if (!kycData) return null;
+
+    if (kycData.status === 'approved') {
+      return (
+        <div className="space-y-6">
+          {/* Verification Success Card */}
+          <div className="bg-white overflow-hidden shadow rounded-lg">
+            <div className="px-4 py-5 sm:p-6">
+              <div className="flex items-center">
+                <div className="flex-shrink-0 bg-green-100 rounded-full p-3">
+                  <svg className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <div className="ml-4">
+                  <h3 className="text-lg leading-6 font-medium text-gray-900">Identity Verified</h3>
+                  <p className="text-sm text-gray-500">Your identity has been successfully verified</p>
+                </div>
+              </div>
+
+              <div className="mt-6 border-t border-gray-200 pt-6">
+                <dl className="grid grid-cols-1 gap-x-4 gap-y-4 sm:grid-cols-2">
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">Full Name</dt>
+                    <dd className="mt-1 text-sm text-gray-900">{kycData.user?.fullName || userData?.fullName || 'N/A'}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">Email</dt>
+                    <dd className="mt-1 text-sm text-gray-900">{kycData.user?.email || userData?.email || 'N/A'}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">Verification Date</dt>
+                    <dd className="mt-1 text-sm text-gray-900">
+                      {kycData.reviewedAt ? new Date(kycData.reviewedAt).toLocaleDateString() : 'N/A'}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">Status</dt>
+                    <dd className="mt-1">
+                      <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        Verified
+                      </span>
+                    </dd>
+                  </div>
+                </dl>
+              </div>
+            </div>
+          </div>
+
+          {/* Next Steps */}
+          <div className="bg-blue-50 rounded-lg p-6">
+            <h3 className="text-lg font-medium text-blue-800 mb-4">Next Steps</h3>
+            <ul role="list" className="space-y-4">
+              <li className="flex items-start">
+                <div className="flex-shrink-0 mt-0.5">
+                  <div className="flex items-center justify-center h-5 w-5 rounded-full bg-blue-100">
+                    <svg className="h-3 w-3 text-blue-600" fill="currentColor" viewBox="0 0 12 12">
+                      <path d="M3.707 5.293a1 1 0 00-1.414 1.414l1.414-1.414zM5 8l-.707.707a1 1 0 001.414 0L5 8zm4.707-3.293a1 1 0 00-1.414-1.414l1.414 1.414zm-7.414 2l2 2 1.414-1.414-2-2-1.414 1.414zm3.414 2l4-4-1.414-1.414-4 4 1.414 1.414z" />
+                    </svg>
+                  </div>
+                </div>
+                <p className="ml-3 text-sm text-blue-700">
+                  <span className="font-medium">Mint your Digital Residency NFT</span> to complete your verification process
+                </p>
+              </li>
+              <li className="flex items-start">
+                <div className="flex-shrink-0 mt-0.5">
+                  <div className="flex items-center justify-center h-5 w-5 rounded-full bg-blue-100">
+                    <svg className="h-3 w-3 text-blue-600" fill="currentColor" viewBox="0 0 12 12">
+                      <path d="M3.707 5.293a1 1 0 00-1.414 1.414l1.414-1.414zM5 8l-.707.707a1 1 0 001.414 0L5 8zm4.707-3.293a1 1 0 00-1.414-1.414l1.414 1.414zm-7.414 2l2 2 1.414-1.414-2-2-1.414 1.414zm3.414 2l4-4-1.414-1.414-4 4 1.414 1.414z" />
+                    </svg>
+                  </div>
+                </div>
+                <p className="ml-3 text-sm text-blue-700">
+                  <span className="font-medium">Explore services</span> available to verified residents
+                </p>
+              </li>
+            </ul>
+            <div className="mt-6">
+              <button
+                onClick={() => setActiveSection('nft')}
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                Mint Your Residency NFT
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // For other statuses (pending, rejected, not_submitted)
+    return (
+      <div className="space-y-6">
+        <div className="bg-white overflow-hidden shadow rounded-lg">
+          <div className="px-4 py-5 sm:p-6">
+            <h3 className="text-lg leading-6 font-medium text-gray-900">KYC Status</h3>
+            <div className="mt-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Current Status</p>
+                  <div className="mt-1">
+                    {getStatusBadge(kycData.status)}
+                  </div>
+                </div>
+                {kycData.status === 'pending' && kycData.submittedAt && (
+                  <div className="text-right">
+                    <p className="text-sm font-medium text-gray-500">Submitted On</p>
+                    <p className="text-sm text-gray-900">
+                      {new Date(kycData.submittedAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                )}
+                {kycData.status === 'rejected' && kycData.reviewedAt && (
+                  <div className="text-right">
+                    <p className="text-sm font-medium text-gray-500">Rejected On</p>
+                    <p className="text-sm text-gray-900">
+                      {new Date(kycData.reviewedAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {kycData.status === 'rejected' && kycData.comments && (
+                <div className="mt-4">
+                  <p className="text-sm font-medium text-gray-500">Reason for Rejection</p>
+                  <p className="mt-1 text-sm text-gray-900 p-3 bg-gray-50 rounded-md">
+                    {kycData.comments}
+                  </p>
+                  <div className="mt-4">
+                    <button
+                      onClick={() => router.push('/')}
+                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                    >
+                      Resubmit KYC
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {kycData.status === 'pending' && (
+                <div className="mt-6">
+                  <div className="rounded-md bg-blue-50 p-4">
+                    <div className="flex">
+                      <div className="flex-shrink-0">
+                        <svg className="h-5 w-5 text-blue-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                          <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h2a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                      <div className="ml-3">
+                        <p className="text-sm text-blue-700">
+                          Your KYC application is under review. This process typically takes 1-2 business days. 
+                          You&apos;ll receive an email notification once your verification is complete.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {kycData.status === 'not_submitted' && (
+                <div className="mt-6">
+                  <div className="rounded-md bg-yellow-50 p-4">
+                    <div className="flex">
+                      <div className="flex-shrink-0">
+                        <svg className="h-5 w-5 text-yellow-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                          <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                      <div className="ml-3">
+                        <h3 className="text-sm font-medium text-yellow-800">Verification Required</h3>
+                        <div className="mt-2 text-sm text-yellow-700">
+                          <p>You need to complete the KYC verification process to access all features.</p>
+                        </div>
+                        <div className="mt-4">
+                          <div className="-mx-2 -my-1.5 flex">
+                            <button
+                              type="button"
+                              onClick={() => router.push('/')}
+                              className="bg-yellow-50 px-2 py-1.5 rounded-md text-sm font-medium text-yellow-800 hover:bg-yellow-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-600"
+                            >
+                              Start Verification
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 relative">
@@ -186,7 +447,7 @@ export default function Dashboard() {
                         : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                     }`}
                   >
-                    <span className="text-base">{renderIcon(item.icon)}</span>
+                    <span className="text-base">{renderIcon(item.icon, item.count)}</span>
                     {item.label}
                   </button>
                 ))}
@@ -249,70 +510,7 @@ export default function Dashboard() {
                 </div>
               )}
 
-              {activeSection === 'kyc' && (
-                <div className="space-y-6">
-                  <div>
-                    <h1 className="text-xl font-semibold text-gray-900 mb-2">
-                      KYC Status
-                    </h1>
-                    <p className="text-sm text-gray-600">
-                      Your identity verification status and details.
-                    </p>
-                  </div>
-
-                  {/* KYC Status Card */}
-                  <div className="border border-gray-200 rounded-lg p-4">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                        <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                      </div>
-                      <div>
-                        <h3 className="text-lg font-medium text-gray-900">Approved</h3>
-                        <p className="text-sm text-gray-600">Your identity has been successfully verified</p>
-                      </div>
-                    </div>
-
-                    <div className="space-y-3 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">Application Date:</span>
-                        <span className="text-gray-900 font-medium">{userData.applicationDate}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">Approval Date:</span>
-                        <span className="text-gray-900 font-medium">{userData.approvalDate}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">Residency ID:</span>
-                        <span className="text-gray-900 font-medium">{userData.residencyId}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Verification Steps */}
-                  <div className="space-y-3">
-                    <h4 className="text-sm font-medium text-gray-900">Verification Steps Completed:</h4>
-                    <div className="space-y-2">
-                      {[
-                        'Personal Information',
-                        'Document Verification',
-                        'Identity Verification (Selfie)',
-                        'Compliance Questions'
-                      ].map((step, index) => (
-                        <div key={index} className="flex items-center gap-2">
-                          <div className="w-4 h-4 bg-green-100 rounded-full flex items-center justify-center">
-                            <svg className="w-2.5 h-2.5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                            </svg>
-                          </div>
-                          <span className="text-sm text-gray-700">{step}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
+              {activeSection === 'kyc' && renderKycStatus()}
 
               {activeSection === 'nft' && (
                 <div className="space-y-6">
