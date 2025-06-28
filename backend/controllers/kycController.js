@@ -6,6 +6,7 @@ import Kyc from '../models/Kyc.js';
 // @access  Public (or Protected if needed)
 export const submitKyc = asyncHandler(async (req, res) => {
   const { fullName, email, address } = req.body;
+  const userId = req.user._id;
 
   const { passportNumber } = req.body;
   const selfieUrl = req.files?.selfie?.[0]?.path;
@@ -16,6 +17,8 @@ export const submitKyc = asyncHandler(async (req, res) => {
     passportNumber,
     selfieUrl,
     address,
+    user: userId,
+    status: 'pending',
   });
 
   res.status(201).json({ message: 'KYC submitted', kycId: kyc._id });
