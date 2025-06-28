@@ -18,6 +18,11 @@ web/.next
 backend/node_modules
 backend/.next
 backend/.yarn
+smart-contracts/node_modules
+smart-contracts/.yarn
+smart-contracts/.next
+smart-contracts/.next
+smart-contracts/.next
 
 # testing
 /coverage

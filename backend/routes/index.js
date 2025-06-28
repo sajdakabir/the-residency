@@ -3,6 +3,7 @@
 // Import routes
 import authRoutes from './auth.js';
 import kycRoutes from './kyc.js';
+import {protect} from '../middleware/auth.js';
 // import userRoutes from './users.js';
 // import applicationRoutes from './applicationRoutes.js';
 // import documentRoutes from './documents.js';
