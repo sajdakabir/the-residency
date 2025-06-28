@@ -1,7 +1,6 @@
 import asyncHandler from 'express-async-handler';
 import Kyc from '../models/Kyc.js';
 import User from '../models/User.js';
-import { randomPassword } from '../utils/randomPassword.js';
 
 // @desc    Submit KYC data
 // @route   POST /api/kyc/submit

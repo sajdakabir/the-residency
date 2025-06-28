@@ -7,23 +7,43 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false)
   const [showApplication, setShowApplication] = useState(false)
   const [currentStep, setCurrentStep] = useState(2) // Start at step 2 since we removed personal info
-  const [formData, setFormData] = useState({
+  // Define the KYC form data type
+  type KycFormData = {
+    [key: string]: string | boolean | null;
+    fullName: string;
+    email: string;
+    // KYC fields
+    passportNumber: string;
+    address: string;
+    city: string;
+    postalCode: string;
+    addressCountry: string;
+    // Selfie
+    selfieImage: string | null;
+    // Compliance questions
+    hasBeenConvicted: boolean | null;
+    hasBankruptcy: boolean | null;
+    isPoliticallyExposed: boolean | null;
+    hasRegulatorySanctions: boolean | null;
+    agreesToTerms: boolean;
+  }
+
+  const [formData, setFormData] = useState<KycFormData>({
     fullName: '',
     email: '',
     // KYC fields
-    legalName: '',
     passportNumber: '',
     address: '',
     city: '',
     postalCode: '',
     addressCountry: '',
     // Selfie
-    selfieImage: null as string | null,
+    selfieImage: null,
     // Compliance questions
-    hasBeenConvicted: null as boolean | null,
-    hasBankruptcy: null as boolean | null,
-    isPoliticallyExposed: null as boolean | null,
-    hasRegulatorySanctions: null as boolean | null,
+    hasBeenConvicted: null,
+    hasBankruptcy: null,
+    isPoliticallyExposed: null,
+    hasRegulatorySanctions: null,
     agreesToTerms: false
   })
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null)
@@ -61,10 +81,83 @@ export default function Home() {
     }
   }
 
-  const handleSubmit = () => {
-    // Here you would normally send the data to your backend
-    console.log('Submitting application:', formData)
-    setIsSubmitted(true)
+  const handleSubmit = async () => {
+    try {
+      setIsLoading(true);
+      
+      // Create FormData object to handle file upload
+      const formDataToSend = new FormData();
+      
+      // Map frontend form fields to backend field names
+      const fieldMappings = {
+        'fullName': 'fullName',
+        'email': 'email',
+        'passportNumber': 'passportNumber',
+        'address': 'address',
+        'city': 'city',
+        'postalCode': 'postalCode',
+        'addressCountry': 'country'  // Map addressCountry to country
+      };
+
+      // Add mapped fields to FormData
+      Object.entries(fieldMappings).forEach(([frontendKey, backendKey]) => {
+        if (formData[frontendKey] !== null && formData[frontendKey] !== undefined) {
+          formDataToSend.append(backendKey, String(formData[frontendKey]));
+        }
+      });
+      
+      // Add compliance fields if they exist
+      if (formData.hasBeenConvicted !== null) {
+        formDataToSend.append('hasBeenConvicted', String(formData.hasBeenConvicted));
+      }
+      if (formData.hasBankruptcy !== null) {
+        formDataToSend.append('hasBankruptcy', String(formData.hasBankruptcy));
+      }
+      if (formData.isPoliticallyExposed !== null) {
+        formDataToSend.append('isPoliticallyExposed', String(formData.isPoliticallyExposed));
+      }
+      
+      // Convert base64 image to blob and append to FormData as 'selfie'
+      if (formData.selfieImage) {
+        const base64Response = await fetch(formData.selfieImage);
+        const blob = await base64Response.blob();
+        formDataToSend.append('selfie', blob, 'selfie.jpg');
+      }
+      
+      // Send the request to the backend
+      console.log('Sending KYC data to:', `${process.env.NEXT_PUBLIC_API_URL}/api/kyc/submit`);
+      console.log('Form data keys:', Array.from(formDataToSend.keys()));
+      
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/kyc/submit`, {
+        method: 'POST',
+        body: formDataToSend,
+        // Don't set Content-Type header - let the browser set it with the correct boundary
+        headers: {
+          'Accept': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        let errorMessage = `HTTP error! status: ${response.status}`;
+        try {
+          const errorData = await response.json();
+          console.error('Error response:', errorData);
+          errorMessage = errorData.message || errorData.error || errorMessage;
+        } catch (e) {
+          console.error('Failed to parse error response:', e);
+        }
+        throw new Error(errorMessage);
+      }
+      
+      // If successful, show success state
+      setIsSubmitted(true);
+      
+    } catch (error) {
+      console.error('Error submitting KYC:', error);
+      alert(`Error submitting KYC: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   const handlePrevious = () => {
@@ -221,7 +314,6 @@ export default function Home() {
                     fullName: '',
                     email: '',
 
-                    legalName: '',
                     passportNumber: '',
                     address: '',
                     city: '',
@@ -290,7 +382,7 @@ export default function Home() {
                       {/* Subtitle lines */}
                       <div>
                         <p className="text-sm text-gray-600 ml-16">
-                          Get verified. Get your ID. Build a company — all from anywhere, under Bhutan's new digital frontier.
+                          Get verified. Get your ID. Build a company — all from anywhere, under Bhutan&apos;s new digital frontier.
                         </p>
                       </div>
                     </div>
@@ -384,8 +476,8 @@ export default function Home() {
                       <input
                         type="text"
                         placeholder="Enter your legal name"
-                        value={formData.legalName}
-                        onChange={(e) => handleInputChange('legalName', e.target.value)}
+                        value={formData.fullName}
+                        onChange={(e) => handleInputChange('fullName', e.target.value)}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                       />
                     </div>
@@ -692,7 +784,7 @@ export default function Home() {
                 onClick={handleContinue}
                 disabled={
                   false &&
-                  (currentStep === 2 && (!formData.legalName || !formData.passportNumber || !formData.address || !formData.city || !formData.postalCode || !formData.addressCountry)) ||
+                  (currentStep === 2 && (!formData.fullName || !formData.passportNumber || !formData.address || !formData.city || !formData.postalCode || !formData.addressCountry)) ||
                   (currentStep === 3 && !formData.selfieImage) ||
                   (currentStep === 4 && (
                     formData.hasBeenConvicted === null ||
