@@ -198,6 +198,7 @@ export default function Dashboard() {
   const menuItems = [
     { id: 'overview', label: 'Overview', icon: 'home' },
     { id: 'kyc', label: 'KYC Status', icon: 'check', count: kycData?.status === 'pending' ? '!' : undefined },
+    { id: 'vc', label: 'Digital Wallet', icon: 'wallet' },
     { id: 'nft', label: 'Residency NFT', icon: 'badge' },
     { id: 'company', label: 'Entities', icon: 'building' },
     { id: 'documents', label: 'Documents', icon: 'document' }
@@ -241,6 +242,12 @@ export default function Dashboard() {
               </span>
             )}
           </div>
+        )
+      case 'wallet':
+        return (
+          <svg className={iconProps} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+          </svg>
         )
       case 'badge':
         return (
@@ -602,6 +609,176 @@ export default function Dashboard() {
               )}
 
               {activeSection === 'kyc' && renderKycStatus()}
+
+              {activeSection === 'vc' && (
+                <div className="space-y-6">
+                  <div>
+                    <h1 className="text-xl font-semibold text-gray-900 mb-2">
+                      Digital Credential Wallet
+                    </h1>
+                    <p className="text-sm text-gray-600">
+                      Manage your verified digital credentials and certificates.
+                    </p>
+                  </div>
+
+                  {/* Check if user is verified */}
+                  {kycData?.status === 'approved' ? (
+                    <div className="space-y-4">
+                      {/* Credential Status */}
+                      <div className="bg-green-50 border border-green-200 rounded-lg p-6">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                            <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+                            </svg>
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="text-lg font-semibold text-green-900">Verifiable Credential Available</h3>
+                            <p className="text-sm text-green-700">Your Bhutan eResidency credential is ready to use</p>
+                          </div>
+                          <div className="text-right">
+                            <div className="bg-green-600 text-white text-xs px-2 py-1 rounded-full font-medium">
+                              ACTIVE
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Quick Actions */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                          <div className="text-center">
+                            <div className="w-12 h-12 bg-blue-100 rounded-lg mx-auto mb-3 flex items-center justify-center">
+                              <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                              </svg>
+                            </div>
+                            <h3 className="text-sm font-medium text-gray-900 mb-1">View Credential</h3>
+                            <p className="text-xs text-gray-600 mb-3">Access your digital wallet</p>
+                            <button
+                              onClick={() => window.open('/vc', '_blank')}
+                              className="text-blue-600 text-sm font-medium hover:text-blue-700"
+                            >
+                              Open Wallet →
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                          <div className="text-center">
+                            <div className="w-12 h-12 bg-purple-100 rounded-lg mx-auto mb-3 flex items-center justify-center">
+                              <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                              </svg>
+                            </div>
+                            <h3 className="text-sm font-medium text-gray-900 mb-1">Download</h3>
+                            <p className="text-xs text-gray-600 mb-3">Save as JSON file</p>
+                            <button
+                              onClick={() => {
+                                alert('Download feature will be available in the full wallet interface');
+                              }}
+                              className="text-purple-600 text-sm font-medium hover:text-purple-700"
+                            >
+                              Download →
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                          <div className="text-center">
+                            <div className="w-12 h-12 bg-green-100 rounded-lg mx-auto mb-3 flex items-center justify-center">
+                              <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" />
+                              </svg>
+                            </div>
+                            <h3 className="text-sm font-medium text-gray-900 mb-1">Share</h3>
+                            <p className="text-xs text-gray-600 mb-3">Generate verification link</p>
+                            <button
+                              onClick={() => {
+                                const verifyUrl = `${window.location.origin}/verify?user=${userData.id}`;
+                                navigator.clipboard.writeText(verifyUrl);
+                                alert('Verification link copied to clipboard!');
+                              }}
+                              className="text-green-600 text-sm font-medium hover:text-green-700"
+                            >
+                              Copy Link →
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Credential Info */}
+                      <div className="bg-white border border-gray-200 rounded-lg p-6">
+                        <h3 className="text-lg font-semibold text-gray-900 mb-4">Credential Information</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <label className="text-gray-500 font-medium">Credential Type</label>
+                            <p className="text-gray-900">Bhutan eResidency Certificate</p>
+                          </div>
+                          <div>
+                            <label className="text-gray-500 font-medium">Issued By</label>
+                            <p className="text-gray-900">Kingdom of Bhutan</p>
+                          </div>
+                          <div>
+                            <label className="text-gray-500 font-medium">Issue Date</label>
+                            <p className="text-gray-900">{kycData?.reviewedAt ? new Date(kycData.reviewedAt).toLocaleDateString() : 'N/A'}</p>
+                          </div>
+                          <div>
+                            <label className="text-gray-500 font-medium">Status</label>
+                            <span className="text-green-600 font-medium">✓ Verified & Active</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Technology Info */}
+                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
+                        <h3 className="text-lg font-semibold text-gray-900 mb-4">W3C Standards Compliance</h3>
+                        <div className="space-y-3 text-sm">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                            <span className="text-gray-700">Verifiable Credentials Data Model v1.1</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                            <span className="text-gray-700">JSON-LD Linked Data</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                            <span className="text-gray-700">Ed25519 Digital Signatures</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                            <span className="text-gray-700">Decentralized Identifiers (DID)</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
+                          <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.98-.833-2.75 0L4.064 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                          </svg>
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-semibold text-yellow-900">Verification Required</h3>
+                          <p className="text-sm text-yellow-700 mt-1">
+                            Complete your KYC verification to access your digital credential wallet.
+                          </p>
+                          <button
+                            onClick={() => setActiveSection('kyc')}
+                            className="mt-3 bg-yellow-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-yellow-700 transition-colors"
+                          >
+                            Complete Verification
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {activeSection === 'nft' && (
                 <div className="space-y-6">
@@ -969,69 +1146,6 @@ export default function Dashboard() {
                                     ≈ {companyFormData.virtualOfficeOptIn ? '0.00614' : '0.00442'} BTC
                                   </span>
                                 </div>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Payment Form */}
-                          <div className="space-y-4">
-                            <h3 className="text-sm font-medium text-gray-900">Bitcoin Payment</h3>
-                            
-                            <div className="bg-orange-50 rounded-lg p-4 border border-orange-200">
-                              <h4 className="text-sm font-medium text-orange-900 mb-2">Payment Instructions</h4>
-                              <p className="text-xs text-orange-700 mb-3">
-                                Send exactly <strong>{companyFormData.virtualOfficeOptIn ? '0.00614' : '0.00442'} BTC</strong> to the address below. Payment will be confirmed automatically.
-                              </p>
-                              <div className="bg-white rounded-md p-3 border border-orange-200">
-                                <div className="text-xs text-gray-500 mb-1">Send to this address:</div>
-                                <div className="font-mono text-sm text-gray-900 break-all">
-                                  bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh
-                                </div>
-                                <button 
-                                  onClick={() => navigator.clipboard.writeText('bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh')}
-                                  className="mt-2 text-xs text-blue-600 hover:text-blue-800"
-                                >
-                                  Copy Address
-                                </button>
-                              </div>
-                            </div>
-                            
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Your Bitcoin Address *
-                              </label>
-                              <input
-                                type="text"
-                                value={companyFormData.bitcoinAddress}
-                                onChange={(e) => handleCompanyFormChange('bitcoinAddress', e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-gray-900 focus:border-gray-900 outline-none font-mono"
-                                placeholder="Enter your Bitcoin address for refunds"
-                              />
-                              <p className="text-xs text-gray-500 mt-1">We'll use this address for any refunds if needed</p>
-                            </div>
-
-                            <div className="flex items-center">
-                              <input
-                                type="checkbox"
-                                id="paymentConfirmed"
-                                checked={companyFormData.paymentConfirmed}
-                                onChange={(e) => handleCompanyFormChange('paymentConfirmed', e.target.checked)}
-                                className="mr-2"
-                              />
-                              <label htmlFor="paymentConfirmed" className="text-sm text-gray-700">
-                                I have sent the Bitcoin payment to the address above
-                              </label>
-                            </div>
-
-                            {/* Security Notice */}
-                            <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                              <div className="flex items-center gap-2">
-                                <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                                </svg>
-                                <span className="text-xs text-gray-600">
-                                  Bitcoin payments are irreversible. Please double-check the address.
-                                </span>
                               </div>
                             </div>
                           </div>
