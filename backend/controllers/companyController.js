@@ -118,6 +118,34 @@ export const registerCompany = asyncHandler(async (req, res) => {
 // @desc    Get company by user ID
 // @route   GET /api/company/user/:userId
 // @access  Public
+// @desc    Get all companies for a user
+// @route   GET /api/company/user/:userId/all
+// @access  Public
+export const getAllUserCompanies = asyncHandler(async (req, res) => {
+  try {
+    const companies = await Company.find({ owner: req.params.userId })
+      .select('-__v -updatedAt')
+      .populate('owner', 'fullName email')
+      .sort({ createdAt: -1 });
+
+    res.json({
+      success: true,
+      count: companies.length,
+      data: companies
+    });
+  } catch (error) {
+    console.error('Get all companies error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: error.message
+    });
+  }
+});
+
+// @desc    Get company by user ID
+// @route   GET /api/company/user/:userId
+// @access  Public
 export const getCompanyByUser = asyncHandler(async (req, res) => {
   try {
     const company = await Company.findOne({ owner: req.params.userId })
@@ -129,6 +157,7 @@ export const getCompanyByUser = asyncHandler(async (req, res) => {
         message: 'No company found for this user'
       });
     }
+
 
     res.json({
       success: true,

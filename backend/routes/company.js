@@ -5,7 +5,8 @@ import {
   getCompanyByRegistration,
   updateCompany,
   getAllCompanies,
-  deleteCompany
+  deleteCompany,
+  getAllUserCompanies
 } from '../controllers/companyController.js';
 
 const router = express.Router();
@@ -14,6 +15,11 @@ const router = express.Router();
 // @desc    Register a new company/entity
 // @access  Public (but requires valid user with approved KYC)
 router.post('/register', registerCompany);
+
+// @route   GET /api/company/user/:userId/all
+// @desc    Get all companies for a user
+// @access  Public
+router.get('/user/:userId/all', getAllUserCompanies);
 
 // @route   GET /api/company/user/:userId
 // @desc    Get company by user ID
