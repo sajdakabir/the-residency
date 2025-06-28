@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Image from 'next/image'
 
 export default function Home() {
@@ -10,8 +10,19 @@ export default function Home() {
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
-    country: ''
+    country: '',
+    // KYC fields
+    legalName: '',
+    passportNumber: '',
+    address: '',
+    city: '',
+    postalCode: '',
+    addressCountry: '',
+    // Selfie
+    selfieImage: null as string | null
   })
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null)
+  const [isCameraActive, setIsCameraActive] = useState(false)
 
   const handleGetStarted = () => {
     setIsLoading(true)
@@ -42,12 +53,74 @@ export default function Home() {
     }
   }
 
+  const startCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { width: 640, height: 480 } 
+      })
+      setCameraStream(stream)
+      setIsCameraActive(true)
+    } catch (error) {
+      console.error('Error accessing camera:', error)
+      alert('Unable to access camera. Please ensure you have granted camera permissions.')
+    }
+  }
+
+  const stopCamera = () => {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(track => track.stop())
+      setCameraStream(null)
+      setIsCameraActive(false)
+    }
+  }
+
+  const takeSelfie = () => {
+    const video = document.getElementById('selfie-video') as HTMLVideoElement
+    const canvas = document.createElement('canvas')
+    canvas.width = video.videoWidth
+    canvas.height = video.videoHeight
+    const ctx = canvas.getContext('2d')
+    
+    if (ctx) {
+      ctx.drawImage(video, 0, 0)
+      const imageData = canvas.toDataURL('image/jpeg', 0.8)
+      setFormData(prev => ({ ...prev, selfieImage: imageData }))
+      stopCamera()
+    }
+  }
+
+  const retakeSelfie = () => {
+    setFormData(prev => ({ ...prev, selfieImage: null }))
+    startCamera()
+  }
+
   const steps = [
     { number: 1, title: 'Personal Information', active: currentStep === 1, completed: currentStep > 1 },
     { number: 2, title: 'KYC Verification', active: currentStep === 2, completed: currentStep > 2 },
     { number: 3, title: 'Entity Setup', active: currentStep === 3, completed: currentStep > 3 },
     { number: 4, title: 'Review & Submit', active: currentStep === 4, completed: false }
   ]
+
+  useEffect(() => {
+    if (showApplication && currentStep === 3 && !formData.selfieImage && !isCameraActive) {
+      startCamera()
+    }
+    
+    return () => {
+      if (cameraStream) {
+        stopCamera()
+      }
+    }
+  }, [showApplication, currentStep])
+
+  useEffect(() => {
+    if (cameraStream && isCameraActive) {
+      const video = document.getElementById('selfie-video') as HTMLVideoElement
+      if (video) {
+        video.srcObject = cameraStream
+      }
+    }
+  }, [cameraStream, isCameraActive])
 
   return (
     <div className="min-h-screen bg-gray-50 relative">
@@ -261,16 +334,190 @@ export default function Home() {
                   <h2 className="text-lg font-medium text-gray-900 mb-4">
                     Step 2: KYC Verification
                   </h2>
-                  <p className="text-gray-600 text-sm">KYC verification form will go here...</p>
+                  
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Legal Name (as on passport)
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Enter your legal name"
+                        value={formData.legalName}
+                        onChange={(e) => handleInputChange('legalName', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Passport Number
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Enter your passport number"
+                        value={formData.passportNumber}
+                        onChange={(e) => handleInputChange('passportNumber', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Street Address
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Enter your street address"
+                        value={formData.address}
+                        onChange={(e) => handleInputChange('address', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          City
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="City"
+                          value={formData.city}
+                          onChange={(e) => handleInputChange('city', e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Postal Code
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="Postal code"
+                          value={formData.postalCode}
+                          onChange={(e) => handleInputChange('postalCode', e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Country
+                      </label>
+                      <select
+                        value={formData.addressCountry}
+                        onChange={(e) => handleInputChange('addressCountry', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                      >
+                        <option value="">Select country</option>
+                        <option value="US">United States</option>
+                        <option value="UK">United Kingdom</option>
+                        <option value="CA">Canada</option>
+                        <option value="AU">Australia</option>
+                        <option value="DE">Germany</option>
+                        <option value="FR">France</option>
+                        <option value="JP">Japan</option>
+                        <option value="SG">Singapore</option>
+                        <option value="IN">India</option>
+                        <option value="CN">China</option>
+                        <option value="BR">Brazil</option>
+                        <option value="MX">Mexico</option>
+                        <option value="other">Other</option>
+                      </select>
+                    </div>
+                  </div>
                 </div>
               )}
 
               {currentStep === 3 && (
                 <div>
                   <h2 className="text-lg font-medium text-gray-900 mb-4">
-                    Step 3: Entity Setup
+                    Step 3: Identity Verification
                   </h2>
-                  <p className="text-gray-600 text-sm">Entity setup form will go here...</p>
+                  <p className="text-sm text-gray-600 mb-6">
+                    Please take a clear selfie for identity verification. Make sure your face is well-lit and clearly visible.
+                  </p>
+                  
+                  <div className="space-y-4">
+                    {!formData.selfieImage ? (
+                      <div className="flex flex-col items-center">
+                        {isCameraActive ? (
+                          <div className="relative">
+                            <video
+                              id="selfie-video"
+                              autoPlay
+                              playsInline
+                              muted
+                              className="w-80 h-60 object-cover rounded-lg border border-gray-300"
+                            />
+                            <div className="mt-4 flex gap-3">
+                              <button
+                                onClick={takeSelfie}
+                                className="bg-blue-600 text-white px-4 py-2 rounded-md font-medium text-sm hover:bg-blue-700 transition-colors"
+                              >
+                                📸 Take Photo
+                              </button>
+                              <button
+                                onClick={stopCamera}
+                                className="bg-gray-500 text-white px-4 py-2 rounded-md font-medium text-sm hover:bg-gray-600 transition-colors"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="text-center">
+                            <div className="w-80 h-60 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center bg-gray-50">
+                              <div className="text-center">
+                                <div className="text-4xl mb-2">📷</div>
+                                <p className="text-gray-500 text-sm">Camera not active</p>
+                              </div>
+                            </div>
+                            <button
+                              onClick={startCamera}
+                              className="mt-4 bg-blue-600 text-white px-4 py-2 rounded-md font-medium text-sm hover:bg-blue-700 transition-colors"
+                            >
+                              Start Camera
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center">
+                        <div className="relative">
+                          <img
+                            src={formData.selfieImage}
+                            alt="Selfie preview"
+                            className="w-80 h-60 object-cover rounded-lg border border-gray-300"
+                          />
+                          <div className="absolute top-2 right-2 bg-green-500 text-white px-2 py-1 rounded text-xs font-medium">
+                            ✓ Photo captured
+                          </div>
+                        </div>
+                        <div className="mt-4 flex gap-3">
+                          <button
+                            onClick={retakeSelfie}
+                            className="bg-gray-500 text-white px-4 py-2 rounded-md font-medium text-sm hover:bg-gray-600 transition-colors"
+                          >
+                            Retake Photo
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+                    <h4 className="text-sm font-medium text-blue-900 mb-2">Tips for a good selfie:</h4>
+                    <ul className="text-xs text-blue-700 space-y-1">
+                      <li>• Ensure good lighting on your face</li>
+                      <li>• Look directly at the camera</li>
+                      <li>• Remove sunglasses or hat</li>
+                      <li>• Keep a neutral expression</li>
+                    </ul>
+                  </div>
                 </div>
               )}
 
@@ -295,7 +542,11 @@ export default function Home() {
               
               <button
                 onClick={handleContinue}
-                disabled={currentStep === 1 && (!formData.fullName || !formData.email || !formData.country)}
+                disabled={
+                  (currentStep === 1 && (!formData.fullName || !formData.email || !formData.country)) ||
+                  (currentStep === 2 && (!formData.legalName || !formData.passportNumber || !formData.address || !formData.city || !formData.postalCode || !formData.addressCountry)) ||
+                  (currentStep === 3 && !formData.selfieImage)
+                }
                 className="bg-gray-900 text-white px-4 py-2 rounded-md font-medium text-sm hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
               >
                 {currentStep === 4 ? 'Submit' : 'Continue'}
