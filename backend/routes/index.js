@@ -7,6 +7,7 @@ import vcRoutes from './vc.js';
 import companyRoutes from './company.js';
 import publicRoutes from './public.js';
 import {protect} from '../middleware/auth.js';
+import adminRoutes from './admin.js';
 // import userRoutes from './users.js';
 // import applicationRoutes from './applicationRoutes.js';
 // import documentRoutes from './documents.js';
@@ -14,13 +15,13 @@ import {protect} from '../middleware/auth.js';
 const initRoutes = (app) => {
     // API Routes
     app.use('/api/auth', authRoutes);
-  app.use('/api/users', usersRoutes);
+    app.use('/api/users', usersRoutes);
     
-      // KYC
-  app.use('/api/kyc', kycRoutes);
-  
-  // Residency/NFT
-  app.use('/api/residency', residencyRoutes);
+    // KYC
+    app.use('/api/kyc', kycRoutes);
+    
+    // Residency/NFT
+    app.use('/api/residency', residencyRoutes);
     
     // Verifiable Credentials
     app.use('/api/vc', vcRoutes);
@@ -30,6 +31,9 @@ const initRoutes = (app) => {
     
     // Public Directory
     app.use('/api/public', publicRoutes);
+    
+    // Admin routes
+    app.use('/api/admin', adminRoutes);
     
     // app.use('/api/users', userRoutes);
     // app.use('/api/applications', applicationRoutes);
@@ -41,7 +45,6 @@ const initRoutes = (app) => {
             message: "Welcome to Fanbase AI Developers Portal"
         });
     });
-
 
 };
 
