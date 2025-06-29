@@ -1,7 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAccount, useConnect, useDisconnect } from 'wagmi';
+import { injected } from 'wagmi/connectors';
 import { useNFTMint } from '@/hooks/useNFTMint';
 import { useCompanyRegistry } from '@/hooks/useCompanyRegistry';
 
@@ -39,7 +41,9 @@ export default function Dashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [isKycLoading, setIsKycLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showMenu, setShowMenu] = useState(false);
   const router = useRouter();
+  const menuRef = useRef<HTMLDivElement>(null);
   
   // Wallet and NFT minting
   const { 
@@ -179,16 +183,26 @@ export default function Dashboard() {
 
         // Check if user has existing company registration
         try {
-          const companyResponse = await fetch(`http://localhost:8000/api/company/user/${userId}`);
+          const companyResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/company/user/${userId}`);
+          console.log('Fetching company data for user:', userId);
+          console.log('Company response status:', companyResponse.status);
+          
           if (companyResponse.ok) {
             const companyResult = await companyResponse.json();
+            console.log('Company result:', companyResult);
+            
             if (companyResult.success && companyResult.data) {
+              console.log('Setting company data:', companyResult.data);
               setCompanyData(companyResult.data);
               setIsSubmitted(true);
+            } else {
+              console.log('No company data found in response');
             }
+          } else {
+            console.log('Company response not ok:', companyResponse.status);
           }
         } catch (error) {
-          console.log('No existing company found or error fetching company data');
+          console.error('Error fetching company data:', error);
         }
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'An error occurred';
@@ -201,6 +215,23 @@ export default function Dashboard() {
 
     fetchUserData();
   }, [router]); // Removed the function dependencies that cause infinite loop
+
+  // Click outside handler for menu
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setShowMenu(false);
+      }
+    };
+
+    if (showMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showMenu]);
 
   const handleCompanyFormChange = (field: string, value: string | boolean | File | null) => {
     setCompanyFormData(prev => ({
@@ -461,6 +492,12 @@ You can try again later from the company details page.`);
         return (
           <svg className={iconProps} fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+        )
+      case 'globe':
+        return (
+          <svg className={iconProps} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9v-9m0-9v9" />
           </svg>
         )
       default:
@@ -745,12 +782,56 @@ You can try again later from the company details page.`);
       </header>
 
       {/* Menu button - top right */}
-      <div className="absolute top-6 right-6 z-10">
-        <button className="p-2">
-          <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
-        </button>
+      <div className="absolute top-6 right-6 z-20">
+        <div className="relative" ref={menuRef}>
+          <button 
+            onClick={() => setShowMenu(!showMenu)}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+          
+          {/* Dropdown Menu */}
+          {showMenu && (
+            <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1">
+              <a
+                href="/directory"
+                className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9v-9m0 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18v-9" />
+                  </svg>
+                  Public Directory
+                </div>
+              </a>
+              <a
+                href="/vc"
+                className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                  </svg>
+                  Digital Wallet
+                </div>
+              </a>
+              <a
+                href="/admin"
+                className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                  </svg>
+                  Admin Panel
+                </div>
+              </a>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Main Container - centered with bordered card */}
@@ -786,7 +867,7 @@ You can try again later from the company details page.`);
                         : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                     }`}
                   >
-                                          <span className="text-base">{renderIcon(item.icon, 'count' in item ? (item as { count?: string }).count : undefined)}</span>
+                    <span className="text-base">{renderIcon(item.icon, 'count' in item ? (item as { count?: string }).count : undefined)}</span>
                     {item.label}
                   </button>
                 ))}
@@ -1233,6 +1314,13 @@ You can try again later from the company details page.`);
 
               {activeSection === 'company' && (
                 <div className="space-y-6">
+                  {/* Debug info */}
+                  {process.env.NODE_ENV === 'development' && (
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3 text-xs">
+                      <strong>Debug:</strong> showCompanyForm: {showCompanyForm.toString()}, isSubmitted: {isSubmitted.toString()}, companyData: {companyData ? 'exists' : 'null'}
+                    </div>
+                  )}
+                  
                   {!showCompanyForm && !isSubmitted && (
                     <div className="ml-8">
                       <h1 className="text-xl font-semibold text-gray-900 mb-2">

@@ -9,6 +9,7 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false)
   const [showApplication, setShowApplication] = useState(false)
   const [currentStep, setCurrentStep] = useState(2) // Start at step 2 since we removed personal info
+  const [showMenu, setShowMenu] = useState(false)
   // Define the KYC form data type
   type KycFormData = {
     [key: string]: string | boolean | null;
@@ -259,6 +260,20 @@ export default function Home() {
     }
   }, [cameraStream, isCameraActive])
 
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (showMenu && !(event.target as Element).closest('.menu-dropdown')) {
+        setShowMenu(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [showMenu])
+
   return (
     <div className="min-h-screen bg-gray-50 relative">
       {/* Grey dots gradient background */}
@@ -281,13 +296,93 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Menu button - top right */}
-      <div className="absolute top-6 right-6 z-10">
-        <button className="p-2">
-          <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
-        </button>
+      {/* Navigation - top right */}
+      <div className="absolute top-6 right-6 z-20 flex items-center gap-4">
+        <a 
+          href="/directory" 
+          className="text-sm text-gray-700 hover:text-gray-900 transition-colors"
+        >
+          Public Directory
+        </a>
+        <div className="relative menu-dropdown">
+          <button 
+            onClick={() => setShowMenu(!showMenu)}
+            className="p-2 hover:bg-gray-100 rounded-md transition-colors"
+          >
+            <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+          
+          {/* Dropdown Menu */}
+          {showMenu && (
+            <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2">
+              <a
+                href="/directory"
+                className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                onClick={() => setShowMenu(false)}
+              >
+                <div className="flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9v-9m0-9v9" />
+                  </svg>
+                  Public Directory
+                </div>
+              </a>
+              <a
+                href="/dashboard"
+                className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                onClick={() => setShowMenu(false)}
+              >
+                <div className="flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  </svg>
+                  Dashboard
+                </div>
+              </a>
+              <a
+                href="/vc"
+                className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                onClick={() => setShowMenu(false)}
+              >
+                <div className="flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                  </svg>
+                  Digital Wallet
+                </div>
+              </a>
+              <a
+                href="/admin"
+                className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                onClick={() => setShowMenu(false)}
+              >
+                <div className="flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                  </svg>
+                  Admin Panel
+                </div>
+              </a>
+              <div className="border-t border-gray-100 my-2"></div>
+              <a 
+                href="#about" 
+                className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                onClick={() => setShowMenu(false)}
+              >
+                About e-Residency
+              </a>
+              <a 
+                href="#contact" 
+                className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                onClick={() => setShowMenu(false)}
+              >
+                Contact
+              </a>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Main Container - centered with bordered card */}
