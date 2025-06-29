@@ -6,6 +6,7 @@ import VCCard from './components/VCCard';
 import VCViewer from './components/VCViewer';
 import VCActions from './components/VCActions';
 import VCVerifier from './components/VCVerifier';
+import ZKProofDemo from './components/ZKProofDemo';
 
 type VerifiableCredential = {
   '@context': string[];
@@ -53,7 +54,7 @@ export default function VCWalletPage() {
   const [vcData, setVcData] = useState<VCData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState<'card' | 'json' | 'verify'>('card');
+  const [activeTab, setActiveTab] = useState<'card' | 'json' | 'verify' | 'zkproof'>('card');
   const router = useRouter();
 
   useEffect(() => {
@@ -195,6 +196,16 @@ export default function VCWalletPage() {
             >
               🛡️ Verifier
             </button>
+            <button
+              onClick={() => setActiveTab('zkproof')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'zkproof'
+                  ? 'border-purple-500 text-purple-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              🔐 ZK Proof
+            </button>
           </nav>
         </div>
 
@@ -215,6 +226,10 @@ export default function VCWalletPage() {
 
         {activeTab === 'verify' && (
           <VCVerifier userVC={vcData.vc} userVCId={vcData.metadata.vcId} />
+        )}
+
+        {activeTab === 'zkproof' && (
+          <ZKProofDemo />
         )}
 
         {/* Security Notice */}
