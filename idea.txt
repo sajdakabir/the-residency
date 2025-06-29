@@ -1,8 +1,0 @@
-1. User visits site → fills basic form (name, passport, country)
-2. Submits → you “verify” their identity (mocked or wait 5s)
-3. After verification, you “issue” their eResident ID
-   - Either via NFT on Polygon testnet (using Alchemy or Infura)
-   - OR just generate a cool-looking PNG card with their data
-4. User dashboard shows:
-   - Name, status (approved), ID issued
-   - QR code or NFT link

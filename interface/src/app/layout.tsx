@@ -16,7 +16,7 @@ export default function RootLayout({
     <html lang="en">
       <body className="antialiased">
         <WalletProvider>
-          {children}
+        {children}
         </WalletProvider>
       </body>
     </html>
