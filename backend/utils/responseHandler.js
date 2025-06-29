@@ -137,7 +137,20 @@ const paginatedResponse = (
   );
 };
 
-module.exports = {
+const responseHandler = {
+  success: successResponse,
+  error: errorResponse,
+  validation: validationError,
+  notFound: notFoundResponse,
+  unauthorized: unauthorizedResponse,
+  forbidden: forbiddenResponse,
+  badRequest: badRequestResponse,
+  serverError: serverErrorResponse,
+  paginated: paginatedResponse,
+};
+
+export {
+  responseHandler,
   successResponse,
   errorResponse,
   validationError,
