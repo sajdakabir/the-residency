@@ -107,6 +107,8 @@ export default function Dashboard() {
   const [newCoFounder, setNewCoFounder] = useState({ name: '', email: '' })
   const [isSubmitted, setIsSubmitted] = useState(false)
   const [companyData, setCompanyData] = useState<{
+    id?: string;
+    _id?: string;
     registrationNumber: string;
     taxId: string;
     registrationDate: string;
@@ -320,9 +322,57 @@ You can try again later from the company details page.`);
     }
   }
 
-  const downloadCertificate = () => {
-    // Mock PDF download
-    alert('Digital Certificate would be downloaded here (PDF generation not implemented in MVP)')
+  const downloadCertificate = async () => {
+    const companyId = companyData?.id || companyData?._id;
+    if (!companyId) {
+      alert('No company found to download certificate for');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/company/certificate/${companyId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/pdf',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      // Get the filename from the response headers or create a default one
+      const contentDisposition = response.headers.get('Content-Disposition');
+      let filename = 'incorporation-certificate.pdf';
+      
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+        if (filenameMatch) {
+          filename = filenameMatch[1];
+        }
+      }
+
+      // Convert response to blob
+      const blob = await response.blob();
+      
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      
+      // Trigger download
+      document.body.appendChild(link);
+      link.click();
+      
+      // Cleanup
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+    } catch (error) {
+      console.error('Certificate download error:', error);
+      alert(`Failed to download certificate: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 
   if (isLoading) {
@@ -1204,7 +1254,16 @@ You can try again later from the company details page.`);
                       </div>
 
                       <button
-                        onClick={() => setShowCompanyForm(true)}
+                        onClick={() => {
+                          // Ensure owner/director is auto-filled when opening the form
+                          if (userData?.fullName) {
+                            setCompanyFormData(prev => ({
+                              ...prev,
+                              ownerDirector: userData.fullName
+                            }));
+                          }
+                          setShowCompanyForm(true);
+                        }}
                         className="bg-gray-900 text-white px-4 py-2 rounded-lg font-medium hover:bg-gray-800 transition-colors text-sm"
                       >
                         Apply for Entity Registration

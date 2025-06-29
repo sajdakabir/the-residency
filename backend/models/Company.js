@@ -40,11 +40,18 @@ const companySchema = new mongoose.Schema(
     registrationNumber: { type: String, unique: true },
     taxId: { type: String, unique: true },
     registrationDate: { type: Date, default: Date.now },
+    incorporationDate: { type: Date }, // When the company was officially incorporated
     status: { 
       type: String, 
-      default: 'Active',
+      default: 'Pending',
       enum: ['Active', 'Pending', 'Suspended', 'Dissolved']
     },
+    
+    // Certificate Information
+    certificateGenerated: { type: Boolean, default: false },
+    certificatePath: { type: String }, // File path to the PDF certificate
+    certificateHash: { type: String }, // Hash for verification
+    certificateGeneratedAt: { type: Date },
     
     // Payment Info (for record keeping)
     registrationFee: { type: Number, default: 299.00 },
@@ -73,6 +80,11 @@ companySchema.pre('save', function(next) {
     this.taxId = 'TAX-' + Math.random().toString(36).substr(2, 6).toUpperCase();
   }
   
+  // Set incorporation date when status becomes Active
+  if (this.status === 'Active' && !this.incorporationDate) {
+    this.incorporationDate = new Date();
+  }
+  
   // Calculate total amount
   this.virtualOfficeFee = this.virtualOfficeOptIn ? 120.00 : 0;
   this.totalAmount = this.registrationFee + this.processingFee + this.virtualOfficeFee;
@@ -80,6 +92,13 @@ companySchema.pre('save', function(next) {
   // Sync legacy name field
   if (this.companyName && !this.name) {
     this.name = this.companyName;
+  }
+  
+  // Set address based on virtual office option
+  if (!this.address) {
+    this.address = this.virtualOfficeOptIn 
+      ? 'Virtual Office, Thimphu, Bhutan' 
+      : 'Thimphu, Bhutan';
   }
   
   next();
