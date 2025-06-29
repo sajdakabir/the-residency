@@ -414,7 +414,7 @@ export default function Dashboard() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             {count && (
-              <span className="absolute -top-2 -right-2 h-4 w-4 flex items-center justify-center rounded-full bg-red-500 text-white text-xs">
+              <span className="absolute -top-1 -right-1 h-3 w-3 flex items-center justify-center rounded-full bg-red-500 text-white text-xs font-medium">
                 {count}
               </span>
             )}
@@ -785,40 +785,53 @@ export default function Dashboard() {
       </div>
 
       {/* Main Container - centered with bordered card */}
-      <div className="min-h-screen flex items-center justify-center p-8 relative z-10">
-        <div className="bg-white rounded-2xl shadow-lg overflow-hidden flex w-full max-w-5xl h-auto min-h-[600px] max-h-[80vh]">
+      <div className="min-h-screen flex items-center justify-center p-12 relative z-10">
+        <div className="bg-white rounded-2xl shadow-xl border border-gray-200/80 overflow-hidden flex w-full max-w-5xl h-auto min-h-[600px] max-h-[80vh]">
           {/* Left side - Sidebar */}
-          <div className="w-80 bg-gray-50 border-r flex-shrink-0">
-            <div className="p-6 h-full">
+          <div className="w-64 bg-white border-r border-gray-200/60 flex-shrink-0">
+            <div className="p-5 h-full">
               {/* User Profile */}
               <div className="mb-8">
-                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4">
-                  <span className="text-xl font-semibold text-blue-600">
-                    {userData.fullName.split(' ').map(n => n[0]).join('')}
-                  </span>
-                </div>
-                <h2 className="text-lg font-semibold text-gray-900">{userData.fullName}</h2>
-                <p className="text-sm text-gray-600">{userData.email}</p>
-                <div className="mt-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                  <span className="w-2 h-2 bg-green-400 rounded-full mr-1"></span>
-                  Digital Resident
+                <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-200/60">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center text-gray-600 font-medium text-sm">
+                    OS
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <p className="text-sm font-medium text-gray-900 truncate">Oliur Sahin</p>
+                    </div>
+                    <p className="text-xs text-gray-500 truncate">oliursahin@gmail.com</p>
+                    <div className="flex items-center gap-1.5 mt-1.5">
+                      <span className="inline-flex items-center gap-1 text-xs text-gray-600 bg-gray-100 px-2 py-0.5 rounded-md">
+                        e-Resident
+                        {userData.kycStatus === 'approved' && (
+                          <svg className="w-3 h-3 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
 
+              {/* Separator */}
+              <div className="h-px bg-gray-200/60 mb-6"></div>
+
               {/* Navigation Menu */}
-              <nav className="space-y-2">
+              <nav className="space-y-1">
                 {menuItems.map((item) => (
                   <button
                     key={item.id}
                     onClick={() => setActiveSection(item.id)}
-                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-all duration-150 ${
                       activeSection === item.id
-                        ? 'bg-blue-100 text-blue-700'
-                        : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                        ? 'bg-gray-100 text-gray-900 shadow-sm'
+                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-800'
                     }`}
                   >
-                    <span className="text-base">{renderIcon(item.icon, 'count' in item ? (item as { count?: string }).count : undefined)}</span>
-                    {item.label}
+                    <span className="text-sm">{renderIcon(item.icon, 'count' in item ? (item as { count?: string }).count : undefined)}</span>
+                    <span className="flex-1 text-left">{item.label}</span>
                   </button>
                 ))}
               </nav>
@@ -827,61 +840,145 @@ export default function Dashboard() {
 
           {/* Right side - Main Content */}
           <div className="flex-1 flex flex-col overflow-hidden">
-            <div className="flex-1 p-8 px-12 overflow-y-auto">
+            <div className="flex-1 p-6 overflow-y-auto bg-gray-50/30">
               {activeSection === 'overview' && (
                 <div className="space-y-6">
                   <div>
-                    <h1 className="text-xl font-semibold text-gray-900 mb-2">
-                      Welcome to your Dashboard
+                    <h1 className="text-2xl font-semibold text-gray-900 mb-2">
+                      Overview
                     </h1>
                     <p className="text-sm text-gray-600">
-                      Manage your digital residency and access all your documents.
+                      Your digital residency status and recent activity.
                     </p>
                   </div>
 
-                  {/* Quick Stats */}
-                  <div className="grid grid-cols-1 gap-4">
-                    <div className="bg-green-50 rounded-lg p-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                          <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  {/* Status Cards */}
+                  <div className="grid grid-cols-1 gap-3">
+                    <div className="bg-white rounded-lg p-5 shadow-sm">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 bg-gray-50 rounded-lg flex items-center justify-center">
+                          <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                           </svg>
                         </div>
-                        <div>
-                          <p className="text-sm font-medium text-green-900">KYC Status:</p>
-                          <p className={`text-sm font-medium ${
-                            userData.kycStatus === 'approved' ? 'text-green-600' : 
-                            userData.kycStatus === 'pending' ? 'text-yellow-600' : 
-                            userData.kycStatus === 'rejected' ? 'text-red-600' : 'text-gray-600'
-                          }`}>
-                            {userData.kycStatus.split('_').map(word => 
-                              word.charAt(0).toUpperCase() + word.slice(1)
-                            ).join(' ')}
-                          </p>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-sm font-medium text-gray-900">Identity Verification</p>
+                              <p className={`text-sm mt-1 ${
+                                userData.kycStatus === 'approved' ? 'text-green-600' : 
+                                userData.kycStatus === 'pending' ? 'text-amber-600' : 
+                                userData.kycStatus === 'rejected' ? 'text-red-600' : 'text-gray-600'
+                              }`}>
+                                {userData.kycStatus.split('_').map(word => 
+                                  word.charAt(0).toUpperCase() + word.slice(1)
+                                ).join(' ')}
+                              </p>
+                            </div>
+                            <div className={`px-2.5 py-1 rounded-full text-xs font-medium ${
+                              userData.kycStatus === 'approved' ? 'bg-green-50 text-green-700' : 
+                              userData.kycStatus === 'pending' ? 'bg-amber-50 text-amber-700' : 
+                              userData.kycStatus === 'rejected' ? 'bg-red-50 text-red-700' : 'bg-gray-50 text-gray-700'
+                            }`}>
+                              {userData.kycStatus === 'approved' ? 'Verified' : 
+                               userData.kycStatus === 'pending' ? 'Pending' : 
+                               userData.kycStatus === 'rejected' ? 'Rejected' : 'Not Started'}
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
 
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                          <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className="bg-white rounded-lg p-5 shadow-sm">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 bg-gray-50 rounded-lg flex items-center justify-center">
+                          <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
                           </svg>
                         </div>
-                        <div>
-                          <p className="text-sm font-medium text-blue-900">
-                            {mintStatus?.hasMinted ? 'NFT Minted' : 'Wallet Connected'}
-                          </p>
-                          <p className="text-xs text-blue-700">
-                            {mintStatus?.hasMinted 
-                              ? `Token ${mintStatus.tokenId || userData.nftTokenId}`
-                              : `${address?.slice(0, 6)}...${address?.slice(-4)}`
-                            }
-                          </p>
-                          <h3 className="text-sm font-medium text-gray-900">NFT Minted</h3>
-                          <p className="text-xs text-gray-600">Your digital identity is ready</p>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-sm font-medium text-gray-900">Digital Identity NFT</p>
+                              <p className="text-sm text-gray-600 mt-1">
+                                {mintStatus?.hasMinted 
+                                  ? `Token #${mintStatus.tokenId || userData.nftTokenId}`
+                                  : isConnected 
+                                    ? `Wallet: ${address?.slice(0, 6)}...${address?.slice(-4)}`
+                                    : 'Not connected'
+                                }
+                              </p>
+                            </div>
+                            <div className={`px-2.5 py-1 rounded-full text-xs font-medium ${
+                              mintStatus?.hasMinted 
+                                ? 'bg-green-50 text-green-700' 
+                                : isConnected 
+                                  ? 'bg-blue-50 text-blue-700'
+                                  : 'bg-gray-50 text-gray-700'
+                            }`}>
+                              {mintStatus?.hasMinted ? 'Minted' : isConnected ? 'Connected' : 'Disconnected'}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Quick Actions */}
+                  <div className="space-y-3">
+                    <h3 className="text-lg font-semibold text-gray-900">Quick Actions</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
+                        <div className="text-center">
+                          <div className="w-12 h-12 bg-purple-50 rounded-lg mx-auto mb-4 flex items-center justify-center">
+                            <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                            </svg>
+                          </div>
+                          <h3 className="text-sm font-medium text-gray-900 mb-2">Complete KYC</h3>
+                          <p className="text-xs text-gray-500 mb-4">Verify your identity</p>
+                          <button
+                            onClick={() => setActiveSection('kyc')}
+                            className="text-purple-600 text-sm font-medium hover:text-purple-700 transition-colors"
+                          >
+                            Start KYC →
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
+                        <div className="text-center">
+                          <div className="w-12 h-12 bg-blue-50 rounded-lg mx-auto mb-4 flex items-center justify-center">
+                            <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                          </div>
+                          <h3 className="text-sm font-medium text-gray-900 mb-2">Mint NFT</h3>
+                          <p className="text-xs text-gray-500 mb-4">Get digital identity</p>
+                          <button
+                            onClick={() => setActiveSection('nft')}
+                            className="text-blue-600 text-sm font-medium hover:text-blue-700 transition-colors"
+                          >
+                            Mint Now →
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
+                        <div className="text-center">
+                          <div className="w-12 h-12 bg-teal-50 rounded-lg mx-auto mb-4 flex items-center justify-center">
+                            <svg className="w-6 h-6 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                            </svg>
+                          </div>
+                          <h3 className="text-sm font-medium text-gray-900 mb-2">Register Company</h3>
+                          <p className="text-xs text-gray-500 mb-4">Incorporate business</p>
+                          <button
+                            onClick={() => setActiveSection('company')}
+                            className="text-teal-600 text-sm font-medium hover:text-teal-700 transition-colors"
+                          >
+                            Register →
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -1251,12 +1348,7 @@ export default function Dashboard() {
 
               {activeSection === 'company' && (
                 <div className="space-y-6">
-                  {/* Debug info */}
-                  {process.env.NODE_ENV === 'development' && (
-                    <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3 text-xs">
-                      <strong>Debug:</strong> showCompanyForm: {showCompanyForm.toString()}, isSubmitted: {isSubmitted.toString()}, companyData: {companyData ? 'exists' : 'null'}
-                    </div>
-                  )}
+
                   
                   {!showCompanyForm && !isSubmitted && (
                     <div className="ml-8">
