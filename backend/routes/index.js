@@ -5,6 +5,7 @@ import kycRoutes from './kyc.js';
 import residencyRoutes from './residency.js';
 import vcRoutes from './vc.js';
 import companyRoutes from './company.js';
+import publicRoutes from './public.js';
 import {protect} from '../middleware/auth.js';
 // import userRoutes from './users.js';
 // import applicationRoutes from './applicationRoutes.js';
@@ -26,6 +27,9 @@ const initRoutes = (app) => {
     
     // Company/Entity Registration
     app.use('/api/company', companyRoutes);
+    
+    // Public Directory
+    app.use('/api/public', publicRoutes);
     
     // app.use('/api/users', userRoutes);
     // app.use('/api/applications', applicationRoutes);

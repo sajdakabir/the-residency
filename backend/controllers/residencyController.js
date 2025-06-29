@@ -4,6 +4,8 @@ import mongoose from 'mongoose';
 import Residency from '../models/Residency.js';
 import User from '../models/User.js';
 import Kyc from '../models/Kyc.js';
+import Company from '../models/Company.js';
+import { responseHandler } from '../utils/responseHandler.js';
 
 dotenv.config();
 
@@ -298,4 +300,132 @@ export const mintResidencyNFT = async (req, res) => {
   } finally {
     await session.endSession();
   }
+};
+
+// Get public directory of verified residents
+const getPublicDirectory = async (req, res) => {
+  try {
+    // Get all approved KYC records
+    const approvedKycs = await Kyc.find({ 
+      status: 'approved' 
+    }).populate('user', 'fullName email walletAddress publicProfile createdAt');
+
+    const publicResidents = [];
+
+    for (const kyc of approvedKycs) {
+      if (!kyc.user) continue;
+
+      const user = kyc.user;
+      
+      // Check if user has opted for public profile (default to false for privacy)
+      const isPublic = user.publicProfile || false;
+      
+      // Get user's companies if any
+      const companies = await Company.find({ owner: user._id }).select(
+        'companyName status registrationDate registrationNumber'
+      );
+
+      // Prepare resident data with privacy controls
+      const residentData = {
+        id: user._id,
+        // Show full name only if public, otherwise show pseudonym
+        name: isPublic ? user.fullName : `Resident-${user._id.toString().slice(-8)}`,
+        residencyDate: kyc.approvedAt || kyc.createdAt,
+        isPublic: isPublic,
+        // Show wallet address only if public and exists
+        walletAddress: isPublic && user.walletAddress ? user.walletAddress : null,
+        // Show entities with obfuscated details unless public
+        entities: companies.map(company => ({
+          id: company._id,
+          name: isPublic ? company.companyName : `Entity-${company.registrationNumber}`,
+          status: company.status,
+          registrationDate: company.registrationDate,
+          registrationNumber: isPublic ? company.registrationNumber : `BT-***${company.registrationNumber.slice(-4)}`
+        }))
+      };
+
+      publicResidents.push(residentData);
+    }
+
+    // Sort by residency date (newest first)
+    publicResidents.sort((a, b) => new Date(b.residencyDate) - new Date(a.residencyDate));
+
+    return responseHandler.success(res, 'Public directory retrieved successfully', {
+      residents: publicResidents,
+      totalCount: publicResidents.length,
+      publicCount: publicResidents.filter(r => r.isPublic).length,
+      privateCount: publicResidents.filter(r => !r.isPublic).length
+    });
+
+  } catch (error) {
+    console.error('Error fetching public directory:', error);
+    return responseHandler.error(res, 'Failed to fetch public directory', 500);
+  }
+};
+
+// Update user's public profile preference
+const updatePublicProfile = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { publicProfile, publicName, publicWallet } = req.body;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return responseHandler.error(res, 'User not found', 404);
+    }
+
+    // Update public profile settings
+    user.publicProfile = publicProfile;
+    if (publicName !== undefined) user.publicName = publicName;
+    if (publicWallet !== undefined) user.publicWallet = publicWallet;
+
+    await user.save();
+
+    return responseHandler.success(res, 'Public profile settings updated', {
+      publicProfile: user.publicProfile,
+      publicName: user.publicName,
+      publicWallet: user.publicWallet
+    });
+
+  } catch (error) {
+    console.error('Error updating public profile:', error);
+    return responseHandler.error(res, 'Failed to update public profile', 500);
+  }
+};
+
+// Get public directory statistics
+const getDirectoryStats = async (req, res) => {
+  try {
+    const totalResidents = await Kyc.countDocuments({ status: 'approved' });
+    const totalEntities = await Company.countDocuments({ status: 'Active' });
+    
+    const publicUsers = await User.countDocuments({ publicProfile: true });
+    
+    // Get recent residents (last 30 days)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    
+    const recentResidents = await Kyc.countDocuments({
+      status: 'approved',
+      approvedAt: { $gte: thirtyDaysAgo }
+    });
+
+    return responseHandler.success(res, 'Directory statistics retrieved', {
+      totalResidents,
+      totalEntities,
+      publicResidents: publicUsers,
+      privateResidents: totalResidents - publicUsers,
+      recentResidents
+    });
+
+  } catch (error) {
+    console.error('Error fetching directory stats:', error);
+    return responseHandler.error(res, 'Failed to fetch directory statistics', 500);
+  }
+};
+
+export {
+  getPublicDirectory,
+  updatePublicProfile,
+  getDirectoryStats
 };

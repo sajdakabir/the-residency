@@ -76,7 +76,11 @@ const userSchema = new mongoose.Schema({
   // NFT information
   nftTokenId: String,
   nftContractAddress: String,
-  eResidencyId: String
+  eResidencyId: String,
+  // Public directory settings
+  publicProfile: { type: Boolean, default: false },
+  publicName: { type: String }, // Custom name for public display
+  publicWallet: { type: Boolean, default: false } // Whether to show wallet publicly
 }, { 
   timestamps: true 
 });
