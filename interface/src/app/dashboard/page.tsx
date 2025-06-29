@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAccount, useConnect, useDisconnect } from 'wagmi';
 import { injected } from 'wagmi/connectors';
 import { useNFTMint } from '@/hooks/useNFTMint';
+import { useCompanyRegistry } from '@/hooks/useCompanyRegistry';
 
 type KycStatus = 'not_submitted' | 'pending' | 'approved' | 'rejected' | 'in_review';
 
@@ -57,6 +58,13 @@ export default function Dashboard() {
     mintStatus,
     setMintStatus 
   } = useNFTMint();
+
+  // Company blockchain registry
+  const { 
+    registerOnChain, 
+    isRegistering, 
+    contractAddress 
+  } = useCompanyRegistry();
 
   // Save wallet address when connected
   const handleWalletConnect = async () => {
@@ -292,7 +300,49 @@ export default function Dashboard() {
         setCompanyData(result.data);
         setIsSubmitted(true);
         setShowCompanyForm(false);
-        alert('Company registered successfully!');
+        
+        // Register on blockchain if wallet is connected
+                 if (isConnected && contractAddress !== '0x1234567890123456789012345678901234567890') {
+          try {
+            console.log('Registering company on blockchain...');
+            const blockchainResult = await registerOnChain({
+              ...registrationData,
+              registrationNumber: result.data.registrationNumber,
+              taxId: result.data.taxId,
+              registrationDate: result.data.registrationDate,
+              status: result.data.status
+            });
+            
+            if (blockchainResult.success) {
+              alert(`Company registered successfully! 
+              
+Database: ✅ Saved
+Blockchain: ✅ Hash stored on-chain
+Transaction: ${blockchainResult.transactionHash}
+
+View on PolygonScan: ${blockchainResult.explorerUrl}`);
+            } else {
+              alert(`Company registered successfully in database! 
+              
+⚠️ Blockchain registration failed: ${blockchainResult.error}
+You can try again later from the company details page.`);
+            }
+          } catch (blockchainError) {
+            console.error('Blockchain registration error:', blockchainError);
+            alert(`Company registered successfully in database! 
+            
+⚠️ Blockchain registration failed: ${blockchainError instanceof Error ? blockchainError.message : 'Unknown error'}
+You can try again later from the company details page.`);
+          }
+        } else {
+          let message = 'Company registered successfully!';
+          if (!isConnected) {
+            message += '\n\n💡 Connect your wallet to also store the company hash on blockchain.';
+                     } else if (contractAddress === '0x1234567890123456789012345678901234567890') {
+            message += '\n\n⚠️ Smart contract not deployed yet. Blockchain registration unavailable.';
+          }
+          alert(message);
+        }
       } else {
         throw new Error(result.message || 'Registration failed');
       }
@@ -1164,7 +1214,7 @@ export default function Dashboard() {
                         <div className="text-white text-center">
                           <div className="text-2xl mb-1">🏔️</div>
                           <div className="text-xs font-medium">DRUK</div>
-                          <div className="text-xs opacity-80">{userData?.nftTokenId || 'N/A'}</div>
+                          <div className="text-xs opacity-80">{mintStatus?.tokenId || userData?.nftTokenId || 'N/A'}</div>
                         </div>
                       </div>
                       <h3 className="text-lg font-medium text-gray-900">Druk Digital Residency</h3>
@@ -1182,17 +1232,30 @@ export default function Dashboard() {
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-500">Network:</span>
-                        <span className="text-gray-900 font-medium">Polygon Mumbai</span>
+                        <span className="text-gray-900 font-medium">Polygon Amoy</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-500">Status:</span>
                         <span className="text-green-600 font-medium">{mintStatus?.hasMinted ? 'Minted' : 'Not Minted'}</span>
                       </div>
-                      {mintStatus?.transactionHash && (
+                      {mintStatus?.hasMinted && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">View NFT:</span>
+                          <a 
+                            href={`https://amoy.polygonscan.com/token/${mintStatus.contractAddress}?a=${mintStatus.tokenId}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:text-blue-800 text-xs underline"
+                          >
+                            PolygonScan →
+                          </a>
+                        </div>
+                      )}
+                      {mintStatus?.transactionHash && mintStatus.transactionHash !== '' && (
                         <div className="flex justify-between">
                           <span className="text-gray-500">Tx Hash:</span>
                           <a 
-                            href={`https://mumbai.polygonscan.com/tx/${mintStatus.transactionHash}`}
+                            href={`https://amoy.polygonscan.com/tx/${mintStatus.transactionHash}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-blue-600 hover:text-blue-800 font-mono text-xs underline"
@@ -1211,7 +1274,7 @@ export default function Dashboard() {
                             const contractAddress = mintStatus?.contractAddress || userData?.nftContract;
                             const tokenId = mintStatus?.tokenId || userData?.nftTokenId;
                             if (contractAddress && tokenId) {
-                              window.open(`https://opensea.io/assets/matic/${contractAddress}/${tokenId}`, '_blank');
+                              window.open(`https://testnets.opensea.io/assets/amoy/${contractAddress}/${tokenId}`, '_blank');
                             }
                           }}
                           className="w-full bg-blue-600 text-white py-2 px-4 rounded-md text-sm font-medium hover:bg-blue-700 transition-colors"
@@ -1633,11 +1696,12 @@ export default function Dashboard() {
                             (currentFormStep === 1 && (!companyFormData.companyName || !companyFormData.companyType || !companyFormData.businessActivity)) ||
                             (currentFormStep === 2 && !companyFormData.governanceModel) ||
                             (currentFormStep === 3 && !companyFormData.termsAccepted) ||
-                            (currentFormStep === 4 && !companyFormData.paymentConfirmed)
+                            (currentFormStep === 4 && !companyFormData.paymentConfirmed) ||
+                            isRegistering
                           }
                           className="bg-gray-900 text-white px-6 py-2 rounded-md font-medium text-sm hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
                         >
-                          {currentFormStep === 4 ? 'Submit Registration' : 'Continue →'}
+                          {currentFormStep === 4 ? (isRegistering ? 'Registering...' : 'Submit Registration') : 'Continue →'}
                         </button>
                       </div>
                     </div>

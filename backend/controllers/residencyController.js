@@ -113,7 +113,7 @@ const saveBlockchainNFTToDatabase = async (userId, nftData, session) => {
       eResidencyId: nftData.eResidencyId,
       timestamp: new Date(parseInt(nftData.timestamp) * 1000).toISOString(),
       description: `e-Residency NFT for ${nftData.name}`,
-      image: `${METADATA_BASE_URI}/images/${nftData.eResidencyId}.png`,
+      image: `http://localhost:8000/api/image/${nftData.eResidencyId}`,
       attributes: [
         {
           trait_type: 'Citizenship',
@@ -145,7 +145,7 @@ const saveBlockchainNFTToDatabase = async (userId, nftData, session) => {
     // Update user with residency data
     const user = await User.findById(userId).session(session);
     if (user) {
-      user.residencyId = nftData.eResidencyId;
+      user.eResidencyId = nftData.eResidencyId;
       user.walletAddress = nftData.walletAddress;
       user.nftTokenId = nftData.tokenId;
       await user.save({ session });
@@ -277,7 +277,7 @@ export const mintResidencyNFT = async (req, res) => {
       eResidencyId,
       timestamp: new Date().toISOString(),
       description: `e-Residency NFT for ${user.fullName}`,
-      image: `${METADATA_BASE_URI}/images/${eResidencyId}.png`,
+      image: `http://localhost:8000/api/image/${eResidencyId}`,
       attributes: [
         {
           trait_type: 'Citizenship',
@@ -296,7 +296,7 @@ export const mintResidencyNFT = async (req, res) => {
       const contract = new ethers.Contract(CONTRACT_ADDRESS, contractABI, wallet);
       
       // Call mint function
-      const tokenUri = `${METADATA_BASE_URI}/${eResidencyId}`;
+      const tokenUri = `http://localhost:8000/api/metadata/${eResidencyId}`;
       const tx = await contract.mintNFT(
         walletAddress,
         metadata.name,
@@ -340,7 +340,7 @@ export const mintResidencyNFT = async (req, res) => {
       await newResidency.save({ session });
       
       // Update user with residency ID
-      user.residencyId = eResidencyId;
+      user.eResidencyId = eResidencyId;
       user.walletAddress = walletAddress.toLowerCase();
       user.nftTokenId = tokenId.toString();
       await user.save({ session });
